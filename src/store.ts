@@ -32,11 +32,11 @@ export interface State {
   tables: Table[]
 }
 
-function initialState(lang: Lang, variant: Variant, table: string): State {
+function initialState(lang: Lang, variant: Variant, table: string, mScreen: MScreen): State {
   return {
     lang,
     variant,
-    mScreen: 'welcome',
+    mScreen,
     mTab: 'home',
     addMethod: 'manual',
     menuCat: 'all',
@@ -96,8 +96,8 @@ export interface Store {
   submitOrder: () => void
 }
 
-export function useMomoStore(lang: Lang, variant: Variant, table = 'A1'): Store {
-  const [s, setS] = useState<State>(() => initialState(lang, variant, table))
+export function useMomoStore(lang: Lang, variant: Variant, table = 'A1', initialScreen: MScreen = 'welcome'): Store {
+  const [s, setS] = useState<State>(() => initialState(lang, variant, table, initialScreen))
   const find = (id: string) => MENU.find((m) => m.id === id)
 
   return useMemo<Store>(() => {

@@ -77,6 +77,12 @@ function paths(type: IconType): ReactNode {
       return [p('M9 22l15-12 15 12'), p('M13 20v16a1 1 0 0 0 1 1h20a1 1 0 0 0 1-1V20'), p('M20 37v-9h8v9')]
     case 'menugrid':
       return [<rect x={6} y={6} width={36} height={36} rx={9} key="r" />, c(17, 18, 2.2, 'a'), c(31, 18, 2.2, 'b'), c(17, 30, 2.2, 'c'), c(31, 30, 2.2, 'd')]
+    case 'edit':
+      return [p('M30 10l8 8'), p('M12 32L31 13l4 4L16 36l-5 1z')]
+    case 'download':
+      return [p('M24 10v18'), p('M16 22l8 8 8-8'), p('M12 36h24')]
+    case 'print':
+      return [p('M16 18V10h16v8'), p('M14 18h20a3 3 0 0 1 3 3v10h-6v6H17v-6h-6V21a3 3 0 0 1 3-3z'), p('M17 31h14')]
     default:
       return [c(24, 24, 12)]
   }

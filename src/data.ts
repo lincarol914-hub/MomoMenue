@@ -6,6 +6,7 @@ export type IconType =
   | 'noodle' | 'chicken' | 'soup' | 'veg' | 'rice' | 'bun' | 'drink'
   | 'bell' | 'back' | 'search' | 'gear' | 'globe' | 'pin' | 'cam'
   | 'file' | 'spark' | 'cart' | 'clip' | 'home' | 'menugrid'
+  | 'edit' | 'download' | 'print'
 
 export interface Dish {
   id: string

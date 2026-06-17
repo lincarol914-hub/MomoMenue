@@ -71,7 +71,7 @@ function Welcome({ store }: { store: Store }) {
       <img src="/assets/m-hero.png" alt="Momo" style={{ width: 236, height: 236, objectFit: 'contain', marginTop: 30 }} />
       <img src="/assets/logo-word.png" alt="MomoMenu" style={{ height: 48, marginTop: 14 }} />
       <div style={{ fontSize: 15.5, color: '#A1887F', marginTop: 16, lineHeight: 1.6, maxWidth: 250 }}>{d.welcomeSub}</div>
-      <div onClick={store.goLogin} style={{ ...primaryBtn, marginTop: 50, width: '100%', height: 60, borderRadius: 20, fontSize: 18, boxShadow: '0 10px 22px -10px rgba(151,120,95,.7)' }}>{d.start}</div>
+      <div onClick={() => window.location.assign('/?onboarding=1')} style={{ ...primaryBtn, marginTop: 50, width: '100%', height: 60, borderRadius: 20, fontSize: 18, boxShadow: '0 10px 22px -10px rgba(151,120,95,.7)' }}>{d.start}</div>
       <div style={{ marginTop: 24, fontSize: 14.5, color: '#A1887F' }}>
         {d.haveAccount}{' '}
         <span onClick={store.goLogin} style={{ color: '#8B6E5C', fontWeight: 700, cursor: 'pointer' }}>{d.login}</span>
