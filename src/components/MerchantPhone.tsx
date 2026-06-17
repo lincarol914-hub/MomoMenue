@@ -1,8 +1,9 @@
 import { CAT_KEYS, MENU, catLabel, type Order, type OrderStatus } from '../data'
 import type { Store } from '../store'
+import { appBaseUrl, downloadAllQr, downloadTableQr, tableLink } from '../qr-export'
 import { Icon } from './Icon'
 import { PhoneFrame } from './PhoneFrame'
-import { Qr } from './Qr'
+import { QrCode } from './QrCode'
 
 const STATUS_COLOR: Record<OrderStatus, string> = { new: '#C0703F', making: '#8B6E5C', done: '#A1887F' }
 const STATUS_BG: Record<OrderStatus, string> = { new: '#F7E6D6', making: '#F0E6D8', done: '#F2EDE5' }
@@ -395,14 +396,8 @@ function AddDish({ store }: { store: Store }) {
 }
 
 function Tables({ store }: { store: Store }) {
-  const { d } = store
-  const data: { n: string; s: 'seats2' | 'seats4' | 'seats6'; st: 'inUse' | 'idle' | 'cleaning' }[] = [
-    { n: '01', s: 'seats2', st: 'inUse' },
-    { n: '02', s: 'seats4', st: 'idle' },
-    { n: '03', s: 'seats4', st: 'inUse' },
-    { n: '04', s: 'seats6', st: 'idle' },
-    { n: '05', s: 'seats2', st: 'cleaning' },
-  ]
+  const { s, d } = store
+  const base = appBaseUrl()
   const statusColor = { inUse: '#C0703F', idle: '#A1887F', cleaning: '#9A8FB0' }
   return (
     <div style={{ padding: '0 0 30px' }}>
@@ -411,28 +406,35 @@ function Tables({ store }: { store: Store }) {
           <Icon type="back" size={22} />
         </div>
         <div style={{ fontSize: 18, fontWeight: 800, color: '#5C463A' }}>{d.qrTitle}</div>
-        <div style={{ fontSize: 13, color: '#8B6E5C', fontWeight: 700 }}>{d.batch}</div>
+        <div onClick={() => downloadAllQr(d.restName, base, s.tables)} style={{ fontSize: 13, color: '#8B6E5C', fontWeight: 700, cursor: 'pointer' }}>{d.batch}</div>
+      </div>
+      <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', margin: '0 22px 16px', background: '#F6EFE6', borderRadius: 14, padding: '12px 14px' }}>
+        <div style={{ flex: 'none' }}><Icon type="spark" size={20} color="#C0703F" /></div>
+        <div style={{ fontSize: 12.5, color: '#8B6E5C', lineHeight: 1.5 }}>{store.L('每桌一个专属二维码，顾客扫码即可进入该桌点餐。', 'Each table has its own QR — guests scan it to order for that table.')}</div>
       </div>
       <div style={{ padding: '0 22px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {data.map((t, i) => (
-          <div key={t.n} style={{ background: '#FFFFFF', borderRadius: 18, padding: 16, boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)' }}>
+        {s.tables.map((t) => (
+          <div key={t.id} style={{ background: '#FFFFFF', borderRadius: 18, padding: 16, boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: '#5C463A' }}>{store.L(t.n + ' 桌', 'Table ' + t.n)}</div>
-              <div style={{ fontSize: 11, color: '#A1887F' }}>{d[t.s]}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#5C463A' }}>{store.L(t.name + ' 桌', 'Table ' + t.name)}</div>
+              <div style={{ fontSize: 11, color: '#A1887F' }}>{d[t.seats]}</div>
             </div>
-            <div style={{ background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
-              <Qr seed={i * 13 + 5} px={92} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
+              <QrCode value={tableLink(base, t.id)} size={92} />
             </div>
-            <div style={{ textAlign: 'center', fontSize: 11.5, fontWeight: 700, color: statusColor[t.st], marginTop: 10 }}>{d[t.st]}</div>
+            <div style={{ textAlign: 'center', fontSize: 11.5, fontWeight: 700, color: statusColor[t.status], marginTop: 10 }}>{d[t.status]}</div>
+            <div onClick={() => downloadTableQr(d.restName, base, t)} style={{ marginTop: 11, height: 34, borderRadius: 10, border: '1px solid #EAD9C7', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: '#8B6E5C', cursor: 'pointer' }}>
+              <Icon type="file" size={15} color="#8B6E5C" />{store.L('下载', 'Save')}
+            </div>
           </div>
         ))}
-        <div onClick={store.goHome} style={{ background: '#F6EFE6', border: '1.6px dashed #D8C4B2', borderRadius: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', minHeight: 150, color: '#A1887F' }}>
+        <div onClick={store.addTable} style={{ background: '#F6EFE6', border: '1.6px dashed #D8C4B2', borderRadius: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', minHeight: 150, color: '#A1887F' }}>
           <div style={{ fontSize: 30, fontWeight: 400, lineHeight: 0.7 }}>＋</div>
           <div style={{ fontSize: 13, fontWeight: 700 }}>{d.addTable}</div>
         </div>
       </div>
       <div style={{ padding: 22 }}>
-        <div onClick={store.goHome} style={{ ...primaryBtn, height: 56, borderRadius: 18, fontSize: 16 }}>{d.downloadAll}</div>
+        <div onClick={() => downloadAllQr(d.restName, base, s.tables)} style={{ ...primaryBtn, height: 56, borderRadius: 18, fontSize: 16 }}>{d.downloadAll}</div>
       </div>
     </div>
   )

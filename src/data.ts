@@ -59,6 +59,25 @@ export const INITIAL_ORDERS: Order[] = [
   { id: 'o4', table: 'A1', items: [['番茄鸡蛋面', 'Tomato Noodles', 1], ['可乐', 'Cola', 1]], note: ['', ''], time: '09:38', status: 'done' },
 ]
 
+export type Seats = 'seats2' | 'seats4' | 'seats6'
+export type TableStatus = 'inUse' | 'idle' | 'cleaning'
+
+export interface Table {
+  /** stable identifier used in the scan URL (?table=<id>) */
+  id: string
+  name: string
+  seats: Seats
+  status: TableStatus
+}
+
+export const INITIAL_TABLES: Table[] = [
+  { id: '01', name: '01', seats: 'seats2', status: 'inUse' },
+  { id: '02', name: '02', seats: 'seats4', status: 'idle' },
+  { id: '03', name: '03', seats: 'seats4', status: 'inUse' },
+  { id: '04', name: '04', seats: 'seats6', status: 'idle' },
+  { id: '05', name: '05', seats: 'seats2', status: 'cleaning' },
+]
+
 export interface Dict {
   tagline: string; merchantLabel: string; customerLabel: string
   variantA: string; variantB: string

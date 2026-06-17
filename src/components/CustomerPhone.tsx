@@ -21,7 +21,7 @@ export function CustomerPhone({ store }: { store: Store }) {
   const barAction = s.cScreen === 'cart' ? store.submitOrder : store.goCart
 
   return (
-    <PhoneFrame label={d.customerLabel}>
+    <PhoneFrame fullscreen>
       <div className="mm-scroll" style={{ flex: 1, overflowY: 'auto' }}>
         {s.cScreen === 'menu' && <CustomerMenu store={store} />}
         {s.cScreen === 'detail' && <CustomerDetail store={store} />}
@@ -71,7 +71,7 @@ function CustomerMenu({ store }: { store: Store }) {
           </div>
         </div>
         <div style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(255,249,243,.16)', borderRadius: 11, padding: '8px 14px', fontSize: 13.5, fontWeight: 700 }}>
-          <Icon type="pin" size={16} color="#FFF9F3" /> {d.cTable} A1
+          <Icon type="pin" size={16} color="#FFF9F3" /> {d.cTable} {s.table}
         </div>
       </div>
 
@@ -156,7 +156,7 @@ function CustomerCart({ store }: { store: Store }) {
         <div style={{ width: 42 }} />
       </div>
       <div style={{ display: 'inline-flex', margin: '0 22px', alignItems: 'center', gap: 7, background: '#F6EFE6', borderRadius: 11, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: '#8B6E5C' }}>
-        <Icon type="pin" size={16} color="#8B6E5C" /> {d.cTable} A1
+        <Icon type="pin" size={16} color="#8B6E5C" /> {d.cTable} {s.table}
       </div>
 
       {s.cart.length === 0 ? (

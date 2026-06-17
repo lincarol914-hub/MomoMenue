@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
-  DICTS, INITIAL_ORDERS, MENU,
-  type CartLine, type CatKey, type Dict, type Lang, type Order, type Variant,
+  DICTS, INITIAL_ORDERS, INITIAL_TABLES, MENU,
+  type CartLine, type CatKey, type Dict, type Lang, type Order, type Table, type Variant,
 } from './data'
 
 export type MScreen = 'welcome' | 'login' | 'home' | 'menu' | 'addDish' | 'qr' | 'orders' | 'settings'
@@ -26,9 +26,13 @@ export interface State {
   cart: CartLine[]
   lastOrderId: string | null
   orders: Order[]
+  /** the table the customer is seated at (from the scanned ?table= URL) */
+  table: string
+  /** restaurant tables managed in the merchant back office */
+  tables: Table[]
 }
 
-function initialState(lang: Lang, variant: Variant): State {
+function initialState(lang: Lang, variant: Variant, table: string): State {
   return {
     lang,
     variant,
@@ -45,6 +49,8 @@ function initialState(lang: Lang, variant: Variant): State {
     cart: [],
     lastOrderId: null,
     orders: INITIAL_ORDERS,
+    table,
+    tables: INITIAL_TABLES,
   }
 }
 
@@ -75,6 +81,7 @@ export interface Store {
   setOrderFilter: (k: OrderFilter) => void
   toggleItem: (id: string) => void
   advance: (id: string) => void
+  addTable: () => void
 
   // customer flow
   setCustCat: (k: Exclude<CatKey, 'all'>) => void
@@ -89,8 +96,8 @@ export interface Store {
   submitOrder: () => void
 }
 
-export function useMomoStore(lang: Lang, variant: Variant): Store {
-  const [s, setS] = useState<State>(() => initialState(lang, variant))
+export function useMomoStore(lang: Lang, variant: Variant, table = 'A1'): Store {
+  const [s, setS] = useState<State>(() => initialState(lang, variant, table))
   const find = (id: string) => MENU.find((m) => m.id === id)
 
   return useMemo<Store>(() => {
@@ -123,6 +130,14 @@ export function useMomoStore(lang: Lang, variant: Variant): Store {
           ...p,
           orders: p.orders.map((o) => (o.id === id ? { ...o, status: o.status === 'new' ? 'making' : 'done' } : o)),
         })),
+      addTable: () =>
+        setS((p) => {
+          let n = p.tables.length + 1
+          const has = (id: string) => p.tables.some((t) => t.id === id)
+          let id = String(n).padStart(2, '0')
+          while (has(id)) id = String(++n).padStart(2, '0')
+          return { ...p, tables: [...p.tables, { id, name: id, seats: 'seats4', status: 'idle' }] }
+        }),
 
       setCustCat: (k) => setS((p) => ({ ...p, cCat: k })),
       openDetail: (id) => setS((p) => ({ ...p, cScreen: 'detail', detailId: id, detailQty: 1 })),
@@ -152,7 +167,7 @@ export function useMomoStore(lang: Lang, variant: Variant): Store {
             return [m.zh, m.en, ci.qty] as Order['items'][number]
           })
           const id = 'oC' + Date.now()
-          const order: Order = { id, table: 'A1', items, note: ['', ''], time: '09:42', status: 'new' }
+          const order: Order = { id, table: p.table, items, note: ['', ''], time: '09:42', status: 'new' }
           return { ...p, orders: [order, ...p.orders], cart: [], cScreen: 'success', lastOrderId: id }
         }),
     }

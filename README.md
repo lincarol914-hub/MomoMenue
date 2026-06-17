@@ -52,6 +52,22 @@ src/
     CustomerPhone.tsx      all customer screens + cart bar
 ```
 
+## Table QR ordering
+
+Each table has its own QR code. The code encodes a URL like
+`https://<your-domain>/?table=01`. The app routes on that `table` query
+param:
+
+- **no `table`** → merchant back office
+- **`?table=01`** → customer ordering page, pre-set to table `01`; placing an
+  order tags it with that table number.
+
+In the merchant **Tables** screen you can add tables, download a single
+table's QR card (PNG), or one-click **download all** as a single printable
+sheet (`下载全部二维码`). QR codes are generated client-side with the
+`qrcode` library and point at the current deployment's origin, so they work
+as soon as the site is live — print them and place one on each table.
+
 ## Notes
 
 - The dish data, prices, copy, and translations are carried over verbatim
