@@ -1,6 +1,7 @@
 * {
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html,
@@ -11,7 +12,9 @@ body,
 
 body {
   margin: 0;
-  font-family: 'Baloo 2', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Noto Sans SC', -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
 /* Hide scrollbars on the in-phone scroll regions, matching the prototype */

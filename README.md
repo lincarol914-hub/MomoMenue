@@ -22,7 +22,7 @@ the customer side adds it to the merchant's order list in real time.
 - Inline styles, matching the design source pixel-for-pixel
 - Procedurally drawn SVG icons and decorative QR codes — no icon/QR
   dependencies
-- Fonts: Baloo 2 + Noto Sans SC (Google Fonts)
+- Fonts: Plus Jakarta Sans + Noto Sans SC (Google Fonts)
 
 ## Getting started
 
