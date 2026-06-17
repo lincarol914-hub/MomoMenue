@@ -7,3 +7,6 @@ dist-ssr
 !.vscode/extensions.json
 
 *.tsbuildinfo
+
+.next
+next-env.d.ts

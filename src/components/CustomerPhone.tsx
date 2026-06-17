@@ -59,7 +59,7 @@ function CustomerMenu({ store }: { store: Store }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 52, height: 52, borderRadius: 15, background: '#FFF9F3', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-              <img src="assets/m-tray.png" style={{ width: 52, height: 52, objectFit: 'contain' }} />
+              <img src="/assets/m-tray.png" style={{ width: 52, height: 52, objectFit: 'contain' }} />
             </div>
             <div>
               <div style={{ fontSize: 19, fontWeight: 800 }}>{d.restName}</div>
@@ -161,7 +161,7 @@ function CustomerCart({ store }: { store: Store }) {
 
       {s.cart.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '50px 22px', color: '#A1887F' }}>
-          <img src="assets/m-cook.png" alt="" style={{ width: 150, height: 150, objectFit: 'contain' }} />
+          <img src="/assets/m-cook.png" alt="" style={{ width: 150, height: 150, objectFit: 'contain' }} />
           <div style={{ fontSize: 15, marginTop: 10 }}>{d.cEmpty}</div>
         </div>
       ) : (
@@ -207,7 +207,7 @@ function CustomerSuccess({ store }: { store: Store }) {
   ]
   return (
     <div style={{ padding: '20px 24px 30px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', minHeight: 700 }}>
-      <img src="assets/m-tablet.png" alt="" style={{ width: 140, height: 140, objectFit: 'contain', marginTop: 14 }} />
+      <img src="/assets/m-tablet.png" alt="" style={{ width: 140, height: 140, objectFit: 'contain', marginTop: 14 }} />
       <div style={{ fontSize: 26, fontWeight: 800, color: '#5C463A', marginTop: 8 }}>{d.placedTitle}</div>
       <div style={{ fontSize: 14.5, color: '#A1887F', marginTop: 10 }}>{d.placedSub}</div>
 

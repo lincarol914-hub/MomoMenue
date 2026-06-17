@@ -1,53 +1,55 @@
 # MomoMenu · 餐厅点餐系统
 
 A bilingual (中文 / English) restaurant ordering system, implemented from a
-Claude Design handoff. It shows two phone apps side by side:
+Claude Design handoff. It is one full-screen app with two entry points:
 
-- **Merchant back office** (商家后台) — welcome, login, dashboard (two home
-  layouts), menu management with per-dish on/off toggles, add-dish flow
-  (manual / file upload / photo capture), table QR codes, order center with
-  accept → mark-ready actions, and settings.
-- **Customer scan-to-order** (顾客扫码点餐) — category-tabbed menu, dish detail
-  with quantity stepper, cart, and an order-placed screen with live status
-  tracking.
-
-Both apps share one store, so the language (中文 / EN) and home-layout
-(A / B) toggles in the header drive both phones at once. Placing an order on
-the customer side adds it to the merchant's order list in real time.
+- **Merchant back office** (`/`) — welcome, login, dashboard, menu management
+  with per-dish on/off toggles, add-dish flow (manual / file upload / photo
+  capture), table QR codes, order center with accept → mark-ready actions, and
+  settings. An in-app 中文 / EN toggle sits in the top-right.
+- **Customer scan-to-order** (`/?table=01`) — opened by scanning a table's QR
+  code: a category-tabbed menu, dish detail with quantity stepper, cart, and an
+  order-placed screen with live status tracking, pre-set to that table.
 
 ## Tech stack
 
-- [Vite](https://vite.dev/) + [React 18](https://react.dev/) +
+- [Next.js 14](https://nextjs.org/) (App Router) + [React 18](https://react.dev/) +
   TypeScript (strict)
 - Inline styles, matching the design source pixel-for-pixel
-- Procedurally drawn SVG icons and decorative QR codes — no icon/QR
-  dependencies
+- Real, scannable QR codes via [`qrcode`](https://www.npmjs.com/package/qrcode);
+  line-art SVG icon set drawn in code
 - Fonts: Plus Jakarta Sans + Noto Sans SC (Google Fonts)
+
+Next.js is used so the app can grow a backend (API routes under `app/api/…`)
+when real-time orders / persistence are added; today it is still front-end only.
 
 ## Getting started
 
 ```bash
 npm install
-npm run dev      # start the dev server (http://localhost:5173)
-npm run build    # type-check + production build into dist/
-npm run preview  # preview the production build
+npm run dev      # start the dev server (http://localhost:3000)
+npm run build    # production build
+npm run start    # serve the production build
 ```
 
 ## Project structure
 
 ```
-index.html                  app shell + Google Fonts
-public/assets/              illustrations and icon images from the design
+app/
+  layout.tsx               root layout: <html>/<body> + Google Fonts
+  page.tsx                 routes on ?table= → merchant or customer
+  globals.css              global reset + scrollbar hiding
+public/assets/             illustrations and icon images from the design
 src/
-  main.tsx                 React entry
-  App.tsx                  showcase page: header toggles + the two phones
-  store.ts                 shared state + actions (ported from the prototype)
-  data.ts                  menu, orders, and zh/en dictionaries
-  styles.css               global reset + scrollbar hiding
+  MerchantApp.tsx          'use client' wrapper for the back office
+  CustomerApp.tsx          'use client' wrapper for the ordering page
+  store.ts                 state + actions (ported from the prototype)
+  data.ts                  menu, orders, tables, and zh/en dictionaries
+  qr-export.ts             table link builder + QR PNG download helpers
   components/
-    PhoneFrame.tsx         device shell (bezel, status bar, home indicator)
+    PhoneFrame.tsx         app shell (full-screen + framed mockup modes)
     Icon.tsx               line-art SVG icon set
-    Qr.tsx                 deterministic decorative QR code
+    QrCode.tsx             real scannable QR canvas
     MerchantPhone.tsx      all merchant screens + bottom nav
     CustomerPhone.tsx      all customer screens + cart bar
 ```
@@ -71,7 +73,8 @@ as soon as the site is live — print them and place one on each table.
 ## Notes
 
 - The dish data, prices, copy, and translations are carried over verbatim
-  from the design. It is a front-end prototype: state is in-memory, login
-  accepts any input (demo mode), and the QR codes are decorative rather than
-  scannable. Wiring a real backend (auth, menu CRUD, live orders) is the
-  natural next step.
+  from the design. It is still front-end only: state is in-memory and login
+  accepts any input (demo mode), so a customer's order is not yet pushed to a
+  separate merchant device. The QR codes are real and scannable. Next steps:
+  add Next.js API routes + a database (e.g. Supabase) for auth, menu CRUD, and
+  live orders.

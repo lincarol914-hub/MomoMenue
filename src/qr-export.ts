@@ -3,14 +3,14 @@ import type { Table } from './data'
 
 /** Base ordering URL of this deployment, e.g. https://momomenu.vercel.app/ */
 export function appBaseUrl(): string {
+  if (typeof window === 'undefined') return ''
   return `${window.location.origin}${window.location.pathname}`
 }
 
 /** The scan URL for a given table, e.g. https://…/?table=01 */
 export function tableLink(base: string, tableId: string): string {
-  const u = new URL(base)
-  u.searchParams.set('table', tableId)
-  return u.toString()
+  const sep = base.includes('?') ? '&' : '?'
+  return `${base}${sep}table=${encodeURIComponent(tableId)}`
 }
 
 const CARD = { w: 440, h: 560, qr: 300 }

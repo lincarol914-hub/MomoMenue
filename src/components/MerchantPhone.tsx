@@ -68,8 +68,8 @@ function Welcome({ store }: { store: Store }) {
   const { d } = store
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 32px 40px', textAlign: 'center', minHeight: 760 }}>
-      <img src="assets/m-hero.png" alt="Momo" style={{ width: 236, height: 236, objectFit: 'contain', marginTop: 30 }} />
-      <img src="assets/logo-word.png" alt="MomoMenu" style={{ height: 48, marginTop: 14 }} />
+      <img src="/assets/m-hero.png" alt="Momo" style={{ width: 236, height: 236, objectFit: 'contain', marginTop: 30 }} />
+      <img src="/assets/logo-word.png" alt="MomoMenu" style={{ height: 48, marginTop: 14 }} />
       <div style={{ fontSize: 15.5, color: '#A1887F', marginTop: 16, lineHeight: 1.6, maxWidth: 250 }}>{d.welcomeSub}</div>
       <div onClick={store.goLogin} style={{ ...primaryBtn, marginTop: 50, width: '100%', height: 60, borderRadius: 20, fontSize: 18, boxShadow: '0 10px 22px -10px rgba(151,120,95,.7)' }}>{d.start}</div>
       <div style={{ marginTop: 24, fontSize: 14.5, color: '#A1887F' }}>
@@ -88,7 +88,7 @@ function Login({ store }: { store: Store }) {
       <div onClick={store.goWelcome} style={{ width: 42, height: 42, borderRadius: 14, background: '#F6EFE6', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
         <Icon type="back" size={22} />
       </div>
-      <img src="assets/m-tablet.png" alt="" style={{ width: 96, height: 96, objectFit: 'contain', marginTop: 28 }} />
+      <img src="/assets/m-tablet.png" alt="" style={{ width: 96, height: 96, objectFit: 'contain', marginTop: 28 }} />
       <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-.5px', color: '#5C463A', marginTop: 14 }}>{d.loginTitle}</div>
       <div style={{ fontSize: 15, color: '#A1887F', marginTop: 10 }}>{d.loginSub}</div>
       <div style={{ marginTop: 36, fontSize: 13.5, fontWeight: 700, color: '#8B6E5C', marginBottom: 10 }}>{d.phone}</div>
@@ -141,7 +141,7 @@ function HomeA({ store }: { store: Store }) {
           <div style={{ fontSize: 22, fontWeight: 800, color: '#5C463A', letterSpacing: '-.5px' }}>{d.greeting} 👋</div>
           <div style={{ fontSize: 13, color: '#A1887F', marginTop: 4 }}>{d.greetingSub}</div>
         </div>
-        <img src="assets/m-tray.png" alt="" style={{ width: 64, height: 64, objectFit: 'contain' }} />
+        <img src="/assets/m-tray.png" alt="" style={{ width: 64, height: 64, objectFit: 'contain' }} />
       </div>
 
       <div style={{ background: '#FFFFFF', borderRadius: 22, padding: 18, marginTop: 20, boxShadow: '0 6px 18px -10px rgba(139,110,92,.25)' }}>
@@ -200,7 +200,7 @@ function HomeB({ store }: { store: Store }) {
             <div style={{ fontSize: 13, color: '#D8C4B2', marginTop: 24 }}>{d.revenue}</div>
             <div style={{ fontSize: 42, fontWeight: 800, letterSpacing: '-2px', marginTop: 4 }}>¥3,210</div>
           </div>
-          <img src="assets/m-tray.png" alt="" style={{ width: 88, height: 88, objectFit: 'contain', marginTop: -4 }} />
+          <img src="/assets/m-tray.png" alt="" style={{ width: 88, height: 88, objectFit: 'contain', marginTop: -4 }} />
         </div>
         <div style={{ display: 'flex', gap: 22, marginTop: 16 }}>
           {stat('58', d.validOrders)}
@@ -347,7 +347,7 @@ function AddDish({ store }: { store: Store }) {
       {s.addMethod === 'file' && (
         <div style={{ padding: '0 22px' }}>
           <div style={{ background: '#FFFFFF', borderRadius: 20, padding: '26px 22px', boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)', textAlign: 'center' }}>
-            <img src="assets/m-mix.png" alt="" style={{ width: 120, height: 120, objectFit: 'contain' }} />
+            <img src="/assets/m-mix.png" alt="" style={{ width: 120, height: 120, objectFit: 'contain' }} />
             <div style={{ width: '100%', height: 118, borderRadius: 18, border: '2px dashed #D8C4B2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 8, color: '#B8A593' }}>
               <Icon type="file" size={46} color="#B8A593" />
             </div>
@@ -509,7 +509,7 @@ function Settings({ store }: { store: Store }) {
       </div>
       <div style={{ padding: '0 22px' }}>
         <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 18, boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)', display: 'flex', alignItems: 'center', gap: 15 }}>
-          <img src="assets/m-tray.png" alt="" style={{ width: 58, height: 58, objectFit: 'contain', flex: 'none' }} />
+          <img src="/assets/m-tray.png" alt="" style={{ width: 58, height: 58, objectFit: 'contain', flex: 'none' }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#5C463A' }}>{d.restName}</div>
             <div style={{ fontSize: 13, color: '#A1887F', marginTop: 3 }}>138 8888 8888</div>
