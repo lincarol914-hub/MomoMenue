@@ -11,8 +11,14 @@ export function MerchantPhone({ store }: { store: Store }) {
   const { s, d } = store
   const showNav = ['home', 'menu', 'orders', 'settings'].includes(s.mScreen)
 
+  const langToggle = (
+    <div onClick={store.toggleLang} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#F6EFE6', borderRadius: 11, padding: '6px 11px', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: '#8B6E5C' }}>
+      <Icon type="globe" size={16} color="#8B6E5C" />{s.lang === 'zh' ? 'EN' : '中文'}
+    </div>
+  )
+
   return (
-    <PhoneFrame label={d.merchantLabel}>
+    <PhoneFrame fullscreen topRight={langToggle}>
       <div className="mm-scroll" style={{ flex: 1, overflowY: 'auto' }}>
         {s.mScreen === 'welcome' && <Welcome store={store} />}
         {s.mScreen === 'login' && <Login store={store} />}

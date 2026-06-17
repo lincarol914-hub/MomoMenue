@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-/** iOS-style status bar (signal / wifi / battery), matching the prototype chrome. */
+/** iOS-style status bar (signal / wifi / battery), used by the framed mockup mode. */
 export function StatusBar() {
   return (
     <div style={{ height: 46, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 30px 0 32px', fontSize: 15, fontWeight: 700, color: '#6B5447', zIndex: 20 }}>
@@ -27,15 +27,35 @@ export function StatusBar() {
 }
 
 interface PhoneFrameProps {
-  label: string
+  /** Caption shown above the device in framed mockup mode. */
+  label?: string
+  /** Fill the whole viewport as a real app instead of a phone mockup. */
+  fullscreen?: boolean
+  /** Content pinned to the top-right of the app (e.g. a language toggle). */
+  topRight?: ReactNode
   children: ReactNode
 }
 
-/** The device shell: brown bezel, cream screen, status bar, and home indicator. */
-export function PhoneFrame({ label, children }: PhoneFrameProps) {
+/**
+ * App shell. In `fullscreen` mode it fills the viewport like a real app, with a
+ * slim top bar holding `topRight`. Otherwise it renders the brown-bezel phone
+ * mockup with a fake status bar and home indicator.
+ */
+export function PhoneFrame({ label, fullscreen, topRight, children }: PhoneFrameProps) {
+  if (fullscreen) {
+    return (
+      <div style={{ width: '100%', height: '100%', background: '#FFF9F3', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ flex: 'none', height: 46, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 16px', zIndex: 20 }}>
+          {topRight}
+        </div>
+        {children}
+      </div>
+    )
+  }
+
   return (
     <div style={{ flex: 'none' }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: '#A1887F', marginBottom: 14, letterSpacing: '.3px' }}>{label}</div>
+      {label && <div style={{ fontSize: 13, fontWeight: 700, color: '#A1887F', marginBottom: 14, letterSpacing: '.3px' }}>{label}</div>}
       <div style={{ position: 'relative', width: 392, height: 840, background: '#5C4A3D', borderRadius: 52, padding: 9, boxShadow: '0 40px 80px -28px rgba(92,74,61,.5)' }}>
         <div style={{ position: 'relative', width: '100%', height: '100%', background: '#FFF9F3', borderRadius: 44, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <StatusBar />

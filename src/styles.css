@@ -3,6 +3,12 @@
   -webkit-font-smoothing: antialiased;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   font-family: 'Baloo 2', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
