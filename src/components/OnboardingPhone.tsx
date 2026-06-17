@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { appBaseUrl, downloadTableQr, tableLink } from '../qr-export'
+import { markOnboarded } from '../onboarding-state'
 import { Icon } from './Icon'
 import { PhoneFrame } from './PhoneFrame'
 import { QrCode } from './QrCode'
@@ -83,6 +84,7 @@ const PRESETS = [4, 8, 12, 20]
 
 /** Enter the real back office (merchant home), the destination after onboarding. */
 function enterApp() {
+  markOnboarded()
   window.location.assign('/?view=home')
 }
 
