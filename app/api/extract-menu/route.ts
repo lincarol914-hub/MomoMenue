@@ -1,33 +1,40 @@
-import Anthropic from '@anthropic-ai/sdk'
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
+// Recognized-dish shape returned to the front-end (unchanged contract).
 const DishSchema = z.object({
-  name: z.string().describe('The dish name, in the menu\'s original language'),
-  price: z.number().describe('The numeric price only, e.g. 28 (no currency symbol)'),
-  category: z
-    .enum(['hot', 'cold', 'staple', 'soup', 'drink'])
-    .describe('hot=signature/hot dishes, cold=cold dishes, staple=rice/noodles/buns, soup, drink'),
-  description: z.string().describe('A short description if present on the menu, otherwise an empty string'),
+  name: z.string(),
+  price: z.coerce.number().catch(0),
+  category: z.enum(['hot', 'cold', 'staple', 'soup', 'drink']).catch('staple'),
+  description: z.string().catch(''),
 })
+const MenuSchema = z.object({ dishes: z.array(DishSchema) })
 
-const MenuSchema = z.object({
-  dishes: z.array(DishSchema),
-})
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'image/gif']
 
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const
+const SYSTEM_PROMPT = [
+  'You read restaurant menus (Chinese or English) from a photo and extract every dish.',
+  'Return ONLY a JSON object of the form {"dishes":[{"name":"","price":0,"category":"","description":""}]}.',
+  '- name: the dish name in the menu\'s original language.',
+  '- price: a number only, no currency symbol. If no price is shown, use 0.',
+  '- category: exactly one of hot, cold, staple, soup, drink',
+  '  (hot = signature / hot dishes; cold = cold dishes; staple = rice / noodles / buns / mains; soup; drink).',
+  '- description: a short description if present on the menu, otherwise an empty string.',
+  'Skip section headers that are not dishes. Output JSON only — no markdown, no commentary.',
+].join('\n')
 
 export async function POST(req: Request) {
-  const apiKey = process.env.ANTHROPIC_API_KEY
+  const apiKey = process.env.DASHSCOPE_API_KEY
   if (!apiKey) {
     return Response.json(
-      { error: 'missing_api_key', message: '后台未配置 ANTHROPIC_API_KEY，请在 Vercel 环境变量中添加。' },
+      { error: 'missing_api_key', message: '后台未配置 DASHSCOPE_API_KEY，请在 Vercel 环境变量中添加百炼 API Key。' },
       { status: 500 },
     )
   }
+  const base = (process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1').replace(/\/+$/, '')
+  const model = process.env.QWEN_VL_MODEL || 'qwen-vl-max'
 
   let file: File | null = null
   try {
@@ -40,51 +47,77 @@ export async function POST(req: Request) {
   if (!file) {
     return Response.json({ error: 'no_file', message: '没有收到文件。' }, { status: 400 })
   }
-
   const mime = file.type
-  const base64 = Buffer.from(await file.arrayBuffer()).toString('base64')
-
-  // Build the vision content block: images and PDFs are read natively by Claude.
-  let mediaBlock: Anthropic.ContentBlockParam
-  if ((IMAGE_TYPES as readonly string[]).includes(mime)) {
-    mediaBlock = { type: 'image', source: { type: 'base64', media_type: mime as (typeof IMAGE_TYPES)[number], data: base64 } }
-  } else if (mime === 'application/pdf') {
-    mediaBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
-  } else {
+  if (!IMAGE_TYPES.includes(mime)) {
     return Response.json(
-      { error: 'unsupported_type', message: '目前支持图片(JPG/PNG/WEBP)和 PDF。Excel/Word 请先导出为 PDF 或截图。' },
+      { error: 'unsupported_type', message: '通义千问 VL 仅支持图片(JPG / PNG / WEBP / BMP)。PDF、Excel、Word 请先截图或导出为图片。' },
       { status: 400 },
     )
   }
+  const dataUrl = `data:${mime};base64,${Buffer.from(await file.arrayBuffer()).toString('base64')}`
 
-  const client = new Anthropic({ apiKey })
+  let res: Response
   try {
-    const response = await client.messages.parse({
-      model: 'claude-opus-4-8',
-      max_tokens: 8000,
-      system:
-        'You read restaurant menus from images or PDFs and extract every dish into structured data. ' +
-        'Keep dish names in the menu\'s original language. Prices are numbers only. ' +
-        'If a dish has no visible price, use 0. Skip section headers that are not dishes.',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            mediaBlock,
-            { type: 'text', text: 'Extract all menu items from this menu.' },
-          ],
-        },
-      ],
-      output_config: { format: zodOutputFormat(MenuSchema) },
+    res = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: dataUrl } },
+              { type: 'text', text: 'Extract every dish from this menu and return the JSON described above.' },
+            ],
+          },
+        ],
+      }),
     })
+  } catch {
+    return Response.json({ error: 'network', message: '连接识别服务失败，请稍后重试。' }, { status: 502 })
+  }
 
-    if (response.stop_reason === 'refusal') {
-      return Response.json({ error: 'refusal', message: '识别被拒绝，请换一张更清晰的菜单图片。' }, { status: 422 })
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    return Response.json(
+      { error: 'extract_failed', message: `识别失败（${res.status}）。`, detail: detail.slice(0, 300) },
+      { status: 502 },
+    )
+  }
+
+  const data = await res.json().catch(() => null)
+  const raw = data?.choices?.[0]?.message?.content
+  const text = Array.isArray(raw)
+    ? raw.map((c: { text?: string }) => c?.text ?? '').join('')
+    : typeof raw === 'string'
+      ? raw
+      : ''
+
+  const parsed = MenuSchema.safeParse(extractJson(text))
+  if (!parsed.success) {
+    return Response.json({ dishes: [] })
+  }
+  return Response.json({ dishes: parsed.data.dishes })
+}
+
+/** Pull the JSON object out of the model's reply (tolerates code fences / prose). */
+function extractJson(text: string): unknown {
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  const body = fence ? fence[1] : text
+  const start = body.indexOf('{')
+  const end = body.lastIndexOf('}')
+  if (start >= 0 && end > start) {
+    try {
+      return JSON.parse(body.slice(start, end + 1))
+    } catch {
+      // fall through
     }
-    const parsed = response.parsed_output
-    return Response.json({ dishes: parsed?.dishes ?? [] })
-  } catch (err) {
-    const message = err instanceof Anthropic.APIError ? `识别失败（${err.status}）。` : '识别失败，请稍后重试。'
-    return Response.json({ error: 'extract_failed', message }, { status: 502 })
+  }
+  try {
+    return JSON.parse(body)
+  } catch {
+    return {}
   }
 }

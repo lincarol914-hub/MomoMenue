@@ -85,22 +85,27 @@ covers the buttons/headings the module needs.
 
 ## Menu recognition (AI)
 
-The merchant **Add dish** screen can build the menu from a photo or document:
+The merchant **Add dish** screen can build the menu from a photo:
 
-- **上传文件 / 拍照添加** send the image or PDF to `POST /api/extract-menu`, a
-  Next.js route that calls Claude's vision model (`claude-opus-4-8`) and returns
-  the dishes (name, price, category, description) as structured JSON. Recognized
-  dishes are listed for review, then added to the menu in one tap.
-- Supported inputs: images (JPG/PNG/WEBP) and PDF. Excel/Word should be exported
-  to PDF or screenshotted first.
+- **上传文件 / 拍照添加** send the image to `POST /api/extract-menu`, a Next.js
+  route that calls **Alibaba Bailian (DashScope) Qwen-VL** (OpenAI-compatible
+  endpoint) and returns the dishes (name, price, category, description) as
+  structured JSON. Recognized dishes are listed for the owner to review, then
+  added to the menu in one tap. Chinese and English menus are both supported.
+- Supported inputs: images (JPG / PNG / WEBP / BMP). PDF / Excel / Word should
+  be screenshotted or exported to an image first (Qwen-VL is image-only).
 
-**Setup:** this needs an Anthropic API key. Get one at
-<https://console.anthropic.com>, then add it as an environment variable named
-`ANTHROPIC_API_KEY` (Vercel: Project → Settings → Environment Variables; local:
-copy `.env.example` to `.env.local`). Without it the endpoint returns a clear
-"key not configured" message and the rest of the app still works. Each
-recognition is a single model call (a fraction of a cent per menu); cost is
-per-use of the API.
+**Setup:** create an API key in the Bailian console (百炼 → API-KEY), then set
+these env vars (Vercel: Project → Settings → Environment Variables; local: copy
+`.env.example` to `.env.local`):
+
+- `DASHSCOPE_API_KEY` (required) — your Bailian API key (`sk-...`)
+- `DASHSCOPE_BASE_URL` (optional) — OpenAI-compatible base URL; defaults to
+  `https://dashscope.aliyuncs.com/compatible-mode/v1`
+- `QWEN_VL_MODEL` (optional) — defaults to `qwen-vl-max`
+
+Without the key the endpoint returns a clear "key not configured" message and
+the rest of the app still works.
 
 ## Notes
 
