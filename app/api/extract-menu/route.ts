@@ -3,6 +3,24 @@ import { z } from 'zod'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
+/**
+ * Health check — open /api/extract-menu in a browser to verify the deployment
+ * can see the env vars (never returns the key itself). If this 404s, the site
+ * isn't deploying the latest code.
+ */
+export async function GET() {
+  const key = process.env.DASHSCOPE_API_KEY ?? ''
+  return Response.json({
+    ok: true,
+    hasKey: key.length > 0,
+    keyLen: key.length,
+    keyPrefix: key ? key.slice(0, 3) : '',
+    base: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: process.env.QWEN_VL_MODEL || 'qwen-vl-max',
+  })
+}
+
+
 // Recognized-dish shape returned to the front-end (unchanged contract).
 const DishSchema = z.object({
   name: z.string(),
