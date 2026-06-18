@@ -7,21 +7,64 @@ export interface ExtractedDish {
   description: string
 }
 
-/** Upload a menu image and get back the recognized dishes. */
+/** Upload a menu image or PDF and get back the recognized dishes. */
 export async function extractMenu(file: File): Promise<ExtractedDish[]> {
-  const upload = await compressImage(file)
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+    const pages = await pdfToImages(file)
+    if (!pages.length) {
+      throw new Error('无法读取该 PDF，请换成图片或截图再试。')
+    }
+    const all: ExtractedDish[] = []
+    for (const page of pages) {
+      all.push(...(await recognizeBlob(page)))
+    }
+    return all
+  }
+  return recognizeBlob(await compressImage(file))
+}
+
+/** Send one image blob to the recognition API. */
+async function recognizeBlob(blob: Blob): Promise<ExtractedDish[]> {
   // Serverless request-body limit is ~4.5MB; stop early with a clear message.
-  if (upload.size > 4_300_000) {
-    throw new Error('图片实在太大、压缩后仍超限,请换一张普通手机照片或截图。')
+  if (blob.size > 4_300_000) {
+    throw new Error('图片实在太大、压缩后仍超限，请换一张普通手机照片或截图。')
   }
   const form = new FormData()
-  form.append('file', upload, upload instanceof File ? upload.name : 'menu.jpg')
+  form.append('file', blob, blob instanceof File ? blob.name : 'menu.jpg')
   const res = await fetch('/api/extract-menu', { method: 'POST', body: form })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
     throw new Error(data?.message || '识别失败，请换一张更清晰的菜单图再试。')
   }
   return (data.dishes ?? []) as ExtractedDish[]
+}
+
+/** Render each page of a PDF to a JPEG image (in the browser) for recognition. */
+async function pdfToImages(file: File, maxPages = 6): Promise<Blob[]> {
+  // Loaded lazily so pdf.js never runs during server-side rendering.
+  const pdfjs = await import('pdfjs-dist')
+  // Self-hosted worker (no CDN — reliable in mainland China).
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+
+  const data = new Uint8Array(await file.arrayBuffer())
+  const pdf = await pdfjs.getDocument({ data }).promise
+  const out: Blob[] = []
+  const pages = Math.min(pdf.numPages, maxPages)
+  for (let i = 1; i <= pages; i++) {
+    const page = await pdf.getPage(i)
+    const base = page.getViewport({ scale: 1 })
+    const scale = Math.min(2.5, Math.max(1, 1800 / Math.max(base.width, base.height)))
+    const viewport = page.getViewport({ scale })
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(viewport.width)
+    canvas.height = Math.round(viewport.height)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) continue
+    await page.render({ canvas, canvasContext: ctx, viewport }).promise
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.8))
+    if (blob) out.push(blob)
+  }
+  return out
 }
 
 const TARGET_BYTES = 3_200_000
