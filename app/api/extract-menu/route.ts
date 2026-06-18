@@ -4,20 +4,31 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 /**
- * Health check — open /api/extract-menu in a browser to verify the deployment
- * can see the env vars (never returns the key itself). If this 404s, the site
- * isn't deploying the latest code.
+ * Health check — open /api/extract-menu to verify the deployment can read the
+ * env vars (never returns the key). Add ?ping=1 to make a real minimal call to
+ * DashScope and report its actual status, so auth/model/endpoint issues can be
+ * diagnosed without uploading an image.
  */
-export async function GET() {
+export async function GET(req: Request) {
   const key = process.env.DASHSCOPE_API_KEY ?? ''
-  return Response.json({
-    ok: true,
-    hasKey: key.length > 0,
-    keyLen: key.length,
-    keyPrefix: key ? key.slice(0, 3) : '',
-    base: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    model: process.env.QWEN_VL_MODEL || 'qwen-vl-max',
-  })
+  const base = (process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1').replace(/\/+$/, '')
+  const model = process.env.QWEN_VL_MODEL || 'qwen-vl-max'
+  const info = { ok: true, hasKey: key.length > 0, keyLen: key.length, keyPrefix: key ? key.slice(0, 3) : '', base, model }
+
+  if (new URL(req.url).searchParams.get('ping') !== '1') return Response.json(info)
+  if (!key) return Response.json({ ...info, ping: 'no_key' })
+
+  try {
+    const r = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: 'reply with: ok' }] }),
+    })
+    const body = await r.text().catch(() => '')
+    return Response.json({ ...info, ping: { status: r.status, ok: r.ok, body: body.slice(0, 400) } })
+  } catch (e) {
+    return Response.json({ ...info, ping: { error: String(e).slice(0, 200) } })
+  }
 }
 
 
