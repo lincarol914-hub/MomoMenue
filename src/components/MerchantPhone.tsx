@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
 import { CAT_KEYS, catLabel, type CatKey, type Order, type OrderStatus } from '../data'
 import type { Store } from '../store'
 import { appBaseUrl, downloadAllQr, downloadTableQr, tableLink } from '../qr-export'
@@ -277,8 +277,9 @@ function AddDish({ store }: { store: Store }) {
     }
   }
   const addAll = () => {
-    if (!results?.length) return
-    store.addDishes(results.map((r, i) => toDish(r, i)))
+    const valid = (results ?? []).filter((r) => r.name.trim())
+    if (!valid.length) return
+    store.addDishes(valid.map((r, i) => toDish({ ...r, name: r.name.trim() }, i)))
     store.goMenu()
   }
 
@@ -306,7 +307,7 @@ function AddDish({ store }: { store: Store }) {
       </div>
 
       {isScan && (results || busy || error) ? (
-        <ScanResult store={store} busy={busy} error={error} results={results} onPick={() => fileRef.current?.click()} onAddAll={addAll} />
+        <ScanResult store={store} busy={busy} error={error} results={results} setResults={setResults} onPick={() => fileRef.current?.click()} onAddAll={addAll} />
       ) : null}
 
       {s.addMethod === 'manual' && (
@@ -393,7 +394,7 @@ function AddDish({ store }: { store: Store }) {
   )
 }
 
-function ScanResult({ store, busy, error, results, onPick, onAddAll }: { store: Store; busy: boolean; error: string; results: ExtractedDish[] | null; onPick: () => void; onAddAll: () => void }) {
+function ScanResult({ store, busy, error, results, setResults, onPick, onAddAll }: { store: Store; busy: boolean; error: string; results: ExtractedDish[] | null; setResults: (r: ExtractedDish[]) => void; onPick: () => void; onAddAll: () => void }) {
   const { d, L } = store
   if (busy) {
     return (
@@ -423,21 +424,51 @@ function ScanResult({ store, busy, error, results, onPick, onAddAll }: { store: 
       </div>
     )
   }
+  // Editable review step — owner can fix name / price / category, delete a row,
+  // or add one by hand, before generating the menu.
+  const editCats: CatKey[] = CAT_KEYS.filter((k) => k !== 'all')
+  const update = (i: number, patch: Partial<ExtractedDish>) =>
+    setResults(results.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
+  const remove = (i: number) => setResults(results.filter((_, idx) => idx !== i))
+  const addRow = () => setResults([...results, { name: '', price: 0, category: 'staple', description: '' }])
+
+  const fieldLabel: CSSProperties = { fontSize: 11, fontWeight: 700, color: '#8B6E5C', marginBottom: 5 }
+  const inputStyle: CSSProperties = { width: '100%', background: '#F6EFE6', border: 'none', borderRadius: 10, padding: '10px 12px', fontSize: 14, color: '#5C463A', fontWeight: 600, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }
+
   return (
     <div style={{ padding: '4px 22px 0' }}>
-      <div style={{ fontSize: 14, fontWeight: 800, color: '#5C463A', marginBottom: 12 }}>{L(`识别到 ${results.length} 道菜`, `Found ${results.length} dishes`)}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: '#5C463A', marginBottom: 4 }}>{L(`识别到 ${results.length} 道菜`, `Found ${results.length} dishes`)}</div>
+      <div style={{ fontSize: 12.5, color: '#A1887F', marginBottom: 12, lineHeight: 1.5 }}>{L('核对并修改菜名、价格、分类，确认无误后生成菜单。', 'Review and edit name, price and category, then generate the menu.')}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {results.map((r, i) => (
-          <div key={i} style={{ background: '#FFFFFF', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 15.5, fontWeight: 700, color: '#5C463A' }}>{r.name}</div>
-              <div style={{ fontSize: 12, color: '#A1887F', marginTop: 3 }}>{catLabel(d, (r.category as CatKey) ?? 'staple')}</div>
+          <div key={i} style={{ background: '#FFFFFF', borderRadius: 16, padding: 14, boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#C4B3A3' }}>#{i + 1}</div>
+              <div onClick={() => remove(i)} style={{ width: 28, height: 28, borderRadius: 9, background: '#F6EFE6', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#B5532E', fontSize: 15, fontWeight: 700 }}>✕</div>
             </div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#8B6E5C' }}>¥{Math.max(0, Math.round(r.price))}</div>
+            <div style={{ marginBottom: 10 }}>
+              <div style={fieldLabel}>{d.fName}</div>
+              <input value={r.name} onChange={(e) => update(i, { name: e.target.value })} placeholder={d.fNamePh} style={inputStyle} />
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={fieldLabel}>{d.fPrice}</div>
+                <input value={r.price === 0 ? '' : String(r.price)} onChange={(e) => update(i, { price: Math.max(0, Number(e.target.value.replace(/[^\d.]/g, '')) || 0) })} inputMode="decimal" placeholder="0" style={inputStyle} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={fieldLabel}>{d.fCat}</div>
+                <select value={r.category} onChange={(e) => update(i, { category: e.target.value as CatKey })} style={{ ...inputStyle, cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
+                  {editCats.map((k) => (
+                    <option key={k} value={k}>{catLabel(d, k)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
         ))}
       </div>
-      <div onClick={onAddAll} style={{ ...primaryBtn, height: 56, borderRadius: 16, fontSize: 16, marginTop: 16 }}>{L(`全部添加到菜单（${results.length}）`, `Add all to menu (${results.length})`)}</div>
+      <div onClick={addRow} style={{ height: 48, borderRadius: 14, border: '1.6px dashed #D8C4B2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 12, color: '#8B6E5C', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>＋ {L('添加一行', 'Add a row')}</div>
+      <div onClick={onAddAll} style={{ ...primaryBtn, height: 56, borderRadius: 16, fontSize: 16, marginTop: 16, opacity: results.length ? 1 : 0.5, pointerEvents: results.length ? 'auto' : 'none' }}>{L(`生成菜单（${results.length}）`, `Generate menu (${results.length})`)}</div>
       <div onClick={onPick} style={{ textAlign: 'center', marginTop: 14, fontSize: 14, fontWeight: 700, color: '#A1887F', cursor: 'pointer' }}>{L('重新选择', 'Choose another')}</div>
     </div>
   )
