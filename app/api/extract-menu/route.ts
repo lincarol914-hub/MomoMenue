@@ -82,7 +82,7 @@ export async function POST(req: Request) {
   if (!res.ok) {
     const detail = await res.text().catch(() => '')
     return Response.json(
-      { error: 'extract_failed', message: `识别失败（${res.status}）。`, detail: detail.slice(0, 300) },
+      { error: 'extract_failed', message: `识别失败（${res.status}）：${detail.slice(0, 240)}`, detail: detail.slice(0, 300) },
       { status: 502 },
     )
   }
