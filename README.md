@@ -75,8 +75,10 @@ as soon as the site is live — print them and place one on each table.
 The merchant home is the dashboard module under `src/dashboard/` (Tailwind for
 layout, inline styles for color). The Home screen replaces the old dashboard;
 its quick actions open three more screens — **营业概览 (Overview)**, **数据统计
-(Stats)**, and **菜单设计 (Menu Design, with a live customer-menu preview)** —
-each with a back button. The bottom tab bar stays 首页 / 订单 / 菜单 / 设置, so
+(Stats)**, and **菜单设计 (Menu Design)** — each with a back button. The menu
+design (theme color, background pattern, and list/card/grid layout) is saved to
+`localStorage` (`src/menu-theme.ts`) and applied live to the customer ordering
+page; swap that module for a DB read/write when a backend is added. The bottom tab bar stays 首页 / 订单 / 菜单 / 设置, so
 menu management (incl. AI recognition), orders, and settings are unchanged.
 
 Tailwind is configured with **preflight disabled** so it can't disturb the

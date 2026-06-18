@@ -1,5 +1,7 @@
 import { CAT_KEYS, MENU, catLabel, type CatKey, type OrderStatus } from '../data'
 import type { Store } from '../store'
+import { useMenuTheme } from '../menu-theme'
+import { patternBackground, type MenuTheme } from '../dashboard/lib/menu-design'
 import { Icon } from './Icon'
 import { PhoneFrame } from './PhoneFrame'
 
@@ -14,6 +16,7 @@ const primaryBar = {
 
 export function CustomerPhone({ store }: { store: Store }) {
   const { s, d } = store
+  const theme = useMenuTheme()
   const showBar = s.cScreen === 'menu' || s.cScreen === 'cart'
   const cartTotal = s.cart.reduce((a, c) => a + (store.find(c.id)?.price ?? 0) * c.qty, 0)
   const cartCount = s.cart.reduce((a, c) => a + c.qty, 0)
@@ -21,22 +24,22 @@ export function CustomerPhone({ store }: { store: Store }) {
   const barAction = s.cScreen === 'cart' ? store.submitOrder : store.goCart
 
   return (
-    <PhoneFrame fullscreen topColor="#8B6E5C">
+    <PhoneFrame fullscreen topColor={theme.color}>
       <div className="mm-scroll" style={{ flex: 1, overflowY: 'auto' }}>
-        {s.cScreen === 'menu' && <CustomerMenu store={store} />}
-        {s.cScreen === 'detail' && <CustomerDetail store={store} />}
+        {s.cScreen === 'menu' && <CustomerMenu store={store} theme={theme} />}
+        {s.cScreen === 'detail' && <CustomerDetail store={store} theme={theme} />}
         {s.cScreen === 'cart' && <CustomerCart store={store} />}
         {s.cScreen === 'success' && <CustomerSuccess store={store} />}
       </div>
 
       {showBar && (
         <div style={{ flex: 'none', background: '#FFF9F3', borderTop: '1px solid #F2E9DD', paddingTop: 14, paddingLeft: 22, paddingRight: 22, paddingBottom: 'calc(26px + env(safe-area-inset-bottom))' }}>
-          <div onClick={barAction} style={{ ...primaryBar, height: 56, borderRadius: 16, justifyContent: 'space-between', padding: '0 22px' }}>
+          <div onClick={barAction} style={{ ...primaryBar, background: theme.color, height: 56, borderRadius: 16, justifyContent: 'space-between', padding: '0 22px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
               <div style={{ position: 'relative' }}>
                 <Icon type="cart" size={24} color="#FFF9F3" />
                 {s.cart.length > 0 && (
-                  <div style={{ position: 'absolute', top: -7, right: -9, minWidth: 18, height: 18, borderRadius: 9, background: '#FFF9F3', color: '#8B6E5C', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{cartCount}</div>
+                  <div style={{ position: 'absolute', top: -7, right: -9, minWidth: 18, height: 18, borderRadius: 9, background: '#FFF9F3', color: theme.color, fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{cartCount}</div>
                 )}
               </div>
               <span style={{ fontSize: 16, fontWeight: 800 }}>¥{cartTotal}</span>
@@ -49,14 +52,23 @@ export function CustomerPhone({ store }: { store: Store }) {
   )
 }
 
-function CustomerMenu({ store }: { store: Store }) {
+function CustomerMenu({ store, theme }: { store: Store; theme: MenuTheme }) {
   const { s, d } = store
   const items = MENU.filter((m) => m.cat === s.cCat)
   const cats = CAT_KEYS.filter((k) => k !== 'all') as Exclude<CatKey, 'all'>[]
+  const pat = patternBackground(theme.pattern)
+  // Round "add" button, tinted with the theme color, reused across layouts.
+  const plus = (id: string, size: number) => (
+    <div
+      onClick={(e) => { e.stopPropagation(); store.addToCart(id, 1) }}
+      style={{ width: size, height: size, borderRadius: '50%', background: theme.color, color: '#FFF9F3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.64), fontWeight: 600, cursor: 'pointer', lineHeight: 0, flex: 'none' }}
+    >+</div>
+  )
   return (
     <div>
-      <div style={{ background: '#8B6E5C', color: '#FFF9F3', padding: '22px 24px 26px', position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ background: theme.color, color: '#FFF9F3', padding: '22px 24px 26px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: pat.backgroundImage, backgroundSize: pat.backgroundSize, pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 52, height: 52, borderRadius: 15, background: '#FFF9F3', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
               <img src="/assets/m-tray.png" style={{ width: 52, height: 52, objectFit: 'contain' }} />
@@ -70,7 +82,7 @@ function CustomerMenu({ store }: { store: Store }) {
             <Icon type="globe" size={16} color="#FFF9F3" />{s.lang === 'zh' ? 'EN' : '中文'}
           </div>
         </div>
-        <div style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(255,249,243,.16)', borderRadius: 11, padding: '8px 14px', fontSize: 13.5, fontWeight: 700 }}>
+        <div style={{ position: 'relative', marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(255,249,243,.16)', borderRadius: 11, padding: '8px 14px', fontSize: 13.5, fontWeight: 700 }}>
           <Icon type="pin" size={16} color="#FFF9F3" /> {d.cTable} {s.table}
         </div>
       </div>
@@ -79,14 +91,15 @@ function CustomerMenu({ store }: { store: Store }) {
         {cats.map((k) => {
           const active = s.cCat === k
           return (
-            <div key={k} onClick={() => store.setCustCat(k)} style={{ flex: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, padding: '7px 15px', borderRadius: 16, background: active ? '#8B6E5C' : 'transparent', color: active ? '#FFF9F3' : '#A1887F', whiteSpace: 'nowrap' }}>{catLabel(d, k)}</div>
+            <div key={k} onClick={() => store.setCustCat(k)} style={{ flex: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, padding: '7px 15px', borderRadius: 16, background: active ? theme.color : 'transparent', color: active ? '#FFF9F3' : '#A1887F', whiteSpace: 'nowrap' }}>{catLabel(d, k)}</div>
           )
         })}
       </div>
 
       <div style={{ padding: '6px 22px 30px' }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: '#5C463A', margin: '16px 0 6px' }}>{catLabel(d, s.cCat)}</div>
-        {items.map((m) => (
+
+        {theme.layout === 'list' && items.map((m) => (
           <div key={m.id} onClick={() => store.openDetail(m.id)} style={{ display: 'flex', gap: 14, padding: '16px 0', borderBottom: '1px solid #F4EEE5', cursor: 'pointer' }}>
             <div style={{ width: 76, height: 76, borderRadius: 16, background: '#F6EFE6', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
               <Icon type={m.icon} size={40} color="#A07E63" />
@@ -97,20 +110,59 @@ function CustomerMenu({ store }: { store: Store }) {
               <div style={{ fontSize: 12, color: '#C4B3A3', marginTop: 6 }}>{d.soldLab} {m.sold}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', flex: 'none' }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#8B6E5C' }}>¥{m.price}</div>
-              <div
-                onClick={(e) => { e.stopPropagation(); store.addToCart(m.id, 1) }}
-                style={{ width: 34, height: 34, borderRadius: '50%', background: '#97785F', color: '#FFF9F3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 600, cursor: 'pointer', lineHeight: 0 }}
-              >+</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: theme.color }}>¥{m.price}</div>
+              {plus(m.id, 34)}
             </div>
           </div>
         ))}
+
+        {theme.layout === 'card' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 10 }}>
+            {items.map((m) => (
+              <div key={m.id} onClick={() => store.openDetail(m.id)} style={{ background: '#FFFFFF', border: '1px solid #F2E9DD', borderRadius: 18, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 6px 18px -14px rgba(92,74,61,.5)' }}>
+                <div style={{ height: 150, background: '#F6EFE6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon type={m.icon} size={64} color="#A07E63" />
+                </div>
+                <div style={{ padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ fontSize: 16.5, fontWeight: 700, color: '#5C463A' }}>{store.nm(m)}</div>
+                    <div style={{ fontSize: 16.5, fontWeight: 800, color: theme.color, flex: 'none' }}>¥{m.price}</div>
+                  </div>
+                  <div style={{ fontSize: 12.5, color: '#A1887F', marginTop: 6, lineHeight: 1.45, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{store.L(m.dzh, m.den)}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+                    <div style={{ fontSize: 12, color: '#C4B3A3' }}>{d.soldLab} {m.sold}</div>
+                    {plus(m.id, 34)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {theme.layout === 'grid' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 10 }}>
+            {items.map((m) => (
+              <div key={m.id} onClick={() => store.openDetail(m.id)} style={{ background: '#FFFFFF', border: '1px solid #F2E9DD', borderRadius: 16, overflow: 'hidden', cursor: 'pointer' }}>
+                <div style={{ height: 96, background: '#F6EFE6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon type={m.icon} size={42} color="#A07E63" />
+                </div>
+                <div style={{ padding: '10px 11px 12px' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#5C463A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{store.nm(m)}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 800, color: theme.color }}>¥{m.price}</div>
+                    {plus(m.id, 28)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-function CustomerDetail({ store }: { store: Store }) {
+function CustomerDetail({ store, theme }: { store: Store; theme: MenuTheme }) {
   const { s, d } = store
   const dm = s.detailId ? store.find(s.detailId)! : MENU[0]
   return (
@@ -124,7 +176,7 @@ function CustomerDetail({ store }: { store: Store }) {
       <div style={{ padding: 24 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#5C463A', letterSpacing: '-.5px' }}>{store.nm(dm)}</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#8B6E5C' }}>¥{dm.price}</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: theme.color }}>¥{dm.price}</div>
         </div>
         <div style={{ fontSize: 12.5, color: '#C4B3A3', marginTop: 8 }}>{d.soldLab} {dm.sold}{'   '}{d.likeLab} {dm.like}</div>
         <div style={{ fontSize: 14.5, color: '#6B5447', lineHeight: 1.7, marginTop: 18 }}>{store.L(dm.dzh, dm.den)}</div>
@@ -136,7 +188,7 @@ function CustomerDetail({ store }: { store: Store }) {
             <div onClick={store.detailInc} style={{ width: 38, height: 38, borderRadius: '50%', background: '#97785F', color: '#FFF9F3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, cursor: 'pointer', lineHeight: 0 }}>+</div>
           </div>
         </div>
-        <div onClick={() => store.addToCart(dm.id, s.detailQty)} style={{ ...primaryBar, marginTop: 28, height: 56, borderRadius: 16, justifyContent: 'center', gap: 10, fontSize: 16, fontWeight: 700 }}>
+        <div onClick={() => store.addToCart(dm.id, s.detailQty)} style={{ ...primaryBar, background: theme.color, marginTop: 28, height: 56, borderRadius: 16, justifyContent: 'center', gap: 10, fontSize: 16, fontWeight: 700 }}>
           {d.cToCart} · ¥{dm.price * s.detailQty}
         </div>
       </div>

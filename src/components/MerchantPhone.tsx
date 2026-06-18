@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
 import { CAT_KEYS, catLabel, type CatKey, type Order, type OrderStatus } from '../data'
 import type { Store } from '../store'
 import { appBaseUrl, downloadAllQr, downloadTableQr, tableLink } from '../qr-export'
@@ -6,6 +6,7 @@ import { extractMenu, toDish, type ExtractedDish } from '../menu-extract'
 import { DICT } from '../dashboard/lib/i18n'
 import type { RangeKey } from '../dashboard/lib/analytics'
 import { DEFAULT_THEME, type MenuTheme } from '../dashboard/lib/menu-design'
+import { loadTheme, saveTheme } from '../menu-theme'
 import type { ScreenKey } from '../dashboard/components/dashboard/BottomNav'
 import type { Dict as DashDict } from '../dashboard/lib/i18n'
 import { OverviewScreen } from '../dashboard/components/dashboard/OverviewScreen'
@@ -24,6 +25,11 @@ export function MerchantPhone({ store }: { store: Store }) {
   const t = DICT[s.lang]
   const [range, setRange] = useState<RangeKey>('week')
   const [menuTheme, setMenuTheme] = useState<MenuTheme>(DEFAULT_THEME)
+  // Load the saved menu design once mounted (SSR-safe), then persist on edit so
+  // the customer ordering page picks it up.
+  useEffect(() => { setMenuTheme(loadTheme()) }, [])
+  const changeTheme = (p: Partial<MenuTheme>) =>
+    setMenuTheme((prev) => { const next = { ...prev, ...p }; saveTheme(next); return next })
 
   // Home quick actions / nav from the dashboard module → existing screens.
   const goScreen = (sk: ScreenKey | 'qr') => {
@@ -48,7 +54,7 @@ export function MerchantPhone({ store }: { store: Store }) {
         {s.mScreen === 'home' && <V2Home store={store} t={t} onNav={goScreen} />}
         {s.mScreen === 'overview' && <OverviewScreen t={t} range={range} onRange={setRange} onBack={store.goHome} />}
         {s.mScreen === 'stats' && <StatsScreen t={t} lang={s.lang} range={range} onRange={setRange} onBack={store.goHome} />}
-        {s.mScreen === 'design' && <MenuDesignScreen t={t} lang={s.lang} theme={menuTheme} onChange={(p) => setMenuTheme((prev) => ({ ...prev, ...p }))} onBack={store.goHome} />}
+        {s.mScreen === 'design' && <MenuDesignScreen t={t} lang={s.lang} theme={menuTheme} onChange={changeTheme} onBack={store.goHome} />}
         {s.mScreen === 'menu' && <MenuMgmt store={store} />}
         {s.mScreen === 'addDish' && <AddDish store={store} />}
         {s.mScreen === 'qr' && <Tables store={store} />}
