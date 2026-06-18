@@ -21,7 +21,7 @@ export function CustomerPhone({ store }: { store: Store }) {
   const barAction = s.cScreen === 'cart' ? store.submitOrder : store.goCart
 
   return (
-    <PhoneFrame fullscreen>
+    <PhoneFrame fullscreen topColor="#8B6E5C">
       <div className="mm-scroll" style={{ flex: 1, overflowY: 'auto' }}>
         {s.cScreen === 'menu' && <CustomerMenu store={store} />}
         {s.cScreen === 'detail' && <CustomerDetail store={store} />}
@@ -30,7 +30,7 @@ export function CustomerPhone({ store }: { store: Store }) {
       </div>
 
       {showBar && (
-        <div style={{ flex: 'none', background: '#FFF9F3', borderTop: '1px solid #F2E9DD', padding: '14px 22px 26px' }}>
+        <div style={{ flex: 'none', background: '#FFF9F3', borderTop: '1px solid #F2E9DD', paddingTop: 14, paddingLeft: 22, paddingRight: 22, paddingBottom: 'calc(26px + env(safe-area-inset-bottom))' }}>
           <div onClick={barAction} style={{ ...primaryBar, height: 56, borderRadius: 16, justifyContent: 'space-between', padding: '0 22px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
               <div style={{ position: 'relative' }}>

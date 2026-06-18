@@ -9,6 +9,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // Draw under the notch / Dynamic Island and tint the browser chrome cream.
+  viewportFit: 'cover',
+  themeColor: '#FFF9F3',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

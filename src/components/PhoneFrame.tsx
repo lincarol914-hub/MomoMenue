@@ -33,6 +33,8 @@ interface PhoneFrameProps {
   fullscreen?: boolean
   /** Content pinned to the top-right of the app (e.g. a language toggle). */
   topRight?: ReactNode
+  /** Color filling the top safe area (Dynamic Island / notch) in fullscreen. */
+  topColor?: string
   children: ReactNode
 }
 
@@ -41,13 +43,17 @@ interface PhoneFrameProps {
  * slim top bar holding `topRight`. Otherwise it renders the brown-bezel phone
  * mockup with a fake status bar and home indicator.
  */
-export function PhoneFrame({ label, fullscreen, topRight, children }: PhoneFrameProps) {
+export function PhoneFrame({ label, fullscreen, topRight, topColor = '#FFF9F3', children }: PhoneFrameProps) {
   if (fullscreen) {
     return (
       <div style={{ width: '100%', height: '100%', background: '#FFF9F3', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ flex: 'none', height: 46, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 16px', zIndex: 20 }}>
-          {topRight}
-        </div>
+        {/* Fill the Dynamic Island / notch strip with the screen's top color */}
+        <div style={{ height: 'env(safe-area-inset-top)', background: topColor, flex: 'none' }} />
+        {topRight ? (
+          <div style={{ flex: 'none', height: 46, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 16px', background: topColor, zIndex: 20 }}>
+            {topRight}
+          </div>
+        ) : null}
         {children}
       </div>
     )
