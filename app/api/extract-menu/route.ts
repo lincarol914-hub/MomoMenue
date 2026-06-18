@@ -15,17 +15,29 @@ export async function GET(req: Request) {
   const model = process.env.QWEN_VL_MODEL || 'qwen-vl-max'
   const info = { ok: true, hasKey: key.length > 0, keyLen: key.length, keyPrefix: key ? key.slice(0, 3) : '', base, model }
 
-  if (new URL(req.url).searchParams.get('ping') !== '1') return Response.json(info)
+  const ping = new URL(req.url).searchParams.get('ping')
+  if (ping !== '1' && ping !== 'img') return Response.json(info)
   if (!key) return Response.json({ ...info, ping: 'no_key' })
+
+  // Tiny embedded 96x96 PNG to test the vision (image) path end-to-end.
+  const TEST_IMG =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAAAjklEQVR42u3QMQ0AAAgDsMlGDnKQhQNOriZV0EwXhygQJEiQIEGCBAlCkCBBggQJEiQIQYIECRIkSJAgBAkSJEiQIEGCBCFIkCBBggQJEoQgQYIECRIkSBCCBAkSJEiQIEGCECRIkCBBggQJQpAgQYIECRIkCEGCBAkSJEiQIEEIEiRIkCBBggQhSJCgPwsKdoPu4hlJjAAAAABJRU5ErkJggg=='
+  const userContent =
+    ping === 'img'
+      ? [
+          { type: 'image_url', image_url: { url: TEST_IMG } },
+          { type: 'text', text: 'reply with: ok' },
+        ]
+      : 'reply with: ok'
 
   try {
     const r = await fetch(`${base}/chat/completions`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: 'reply with: ok' }] }),
+      body: JSON.stringify({ model, messages: [{ role: 'user', content: userContent }] }),
     })
     const body = await r.text().catch(() => '')
-    return Response.json({ ...info, ping: { status: r.status, ok: r.ok, body: body.slice(0, 400) } })
+    return Response.json({ ...info, ping: { mode: ping, status: r.status, ok: r.ok, body: body.slice(0, 400) } })
   } catch (e) {
     return Response.json({ ...info, ping: { error: String(e).slice(0, 200) } })
   }
