@@ -34,7 +34,7 @@ export function MerchantPhone({ store }: { store: Store }) {
       </div>
 
       {showNav && (
-        <div style={{ flex: 'none', height: 'calc(62px + env(safe-area-inset-bottom))', display: 'flex', borderTop: '1px solid #F2E9DD', background: '#FFFFFF', paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}>
+        <div style={{ flex: 'none', height: 'calc(56px + env(safe-area-inset-bottom))', display: 'flex', borderTop: '1px solid #F2E9DD', background: '#FFFFFF', paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <NavItem label={d.navHome} icon="home" active={s.mTab === 'home'} onClick={store.goHome} />
           <NavItem label={d.navOrders} icon="clip" active={s.mTab === 'orders'} onClick={store.goOrders} />
           <NavItem label={d.navMenu} icon="menugrid" active={s.mTab === 'menu'} onClick={store.goMenu} />
