@@ -14,13 +14,27 @@ export async function extractMenu(file: File): Promise<ExtractedDish[]> {
     if (!pages.length) {
       throw new Error('无法读取该 PDF，请换成图片或截图再试。')
     }
-    const all: ExtractedDish[] = []
-    for (const page of pages) {
-      all.push(...(await recognizeBlob(page)))
-    }
-    return all
+    // Recognize pages with limited concurrency — much faster than one-by-one for
+    // multi-page PDFs, while staying under the model's request-rate limit.
+    const perPage = await mapLimit(pages, 3, recognizeBlob)
+    return perPage.flat()
   }
   return recognizeBlob(await compressImage(file))
+}
+
+/** Run an async mapper over items, at most `limit` in flight, preserving order. */
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  const worker = async () => {
+    while (true) {
+      const i = next++
+      if (i >= items.length) return
+      results[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
 }
 
 /** Send one image blob to the recognition API. */
