@@ -10,6 +10,10 @@ export interface ExtractedDish {
 /** Upload a menu image and get back the recognized dishes. */
 export async function extractMenu(file: File): Promise<ExtractedDish[]> {
   const upload = await compressImage(file)
+  // Serverless request-body limit is ~4.5MB; stop early with a clear message.
+  if (upload.size > 4_300_000) {
+    throw new Error('图片太大,请用普通手机照片或截图(一般几 MB),不要用超大扫描件。')
+  }
   const form = new FormData()
   form.append('file', upload, upload instanceof File ? upload.name : 'menu.jpg')
   const res = await fetch('/api/extract-menu', { method: 'POST', body: form })
