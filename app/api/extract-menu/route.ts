@@ -54,9 +54,10 @@ const DishSchema = z.object({
 const MenuSchema = z.object({ dishes: z.array(DishSchema) })
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'image/gif']
+const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
 const SYSTEM_PROMPT = [
-  'You read restaurant menus (Chinese or English) from a photo and extract every dish.',
+  'You read restaurant menus (Chinese or English) and extract every dish.',
   'Return ONLY a JSON object of the form {"dishes":[{"name":"","price":0,"category":"","description":""}]}.',
   '- name: the dish name in the menu\'s original language.',
   '- price: a number only, no currency symbol. If no price is shown, use 0.',
@@ -88,14 +89,37 @@ export async function POST(req: Request) {
   if (!file) {
     return Response.json({ error: 'no_file', message: '没有收到文件。' }, { status: 400 })
   }
+
   const mime = file.type
-  if (!IMAGE_TYPES.includes(mime)) {
+  const isDocx = mime === DOCX_TYPE || /\.docx$/i.test(file.name)
+
+  // Build the model input: image dishes are "seen"; Word docs are read as text.
+  let userContent: unknown
+  if (IMAGE_TYPES.includes(mime)) {
+    const dataUrl = `data:${mime};base64,${Buffer.from(await file.arrayBuffer()).toString('base64')}`
+    userContent = [
+      { type: 'image_url', image_url: { url: dataUrl } },
+      { type: 'text', text: 'Extract every dish from this menu and return the JSON described above.' },
+    ]
+  } else if (isDocx) {
+    let text = ''
+    try {
+      const mammoth = await import('mammoth')
+      const buffer = Buffer.from(await file.arrayBuffer())
+      text = (await mammoth.extractRawText({ buffer })).value.trim()
+    } catch {
+      return Response.json({ error: 'docx_failed', message: '无法读取该 Word 文件，请确认是 .docx 格式,或导出为 PDF / 图片。' }, { status: 400 })
+    }
+    if (!text) {
+      return Response.json({ error: 'empty_docx', message: 'Word 里没读到文字(可能整张是图片),请把它导出成 PDF 或截图后再传。' }, { status: 400 })
+    }
+    userContent = `Here is the menu text:\n\n${text}\n\nExtract every dish and return the JSON described above.`
+  } else {
     return Response.json(
-      { error: 'unsupported_type', message: '通义千问 VL 仅支持图片(JPG / PNG / WEBP / BMP)。PDF、Excel、Word 请先截图或导出为图片。' },
+      { error: 'unsupported_type', message: '支持图片(JPG/PNG/WEBP)、PDF、Word(.docx)。其它格式请先导出为图片或 PDF。' },
       { status: 400 },
     )
   }
-  const dataUrl = `data:${mime};base64,${Buffer.from(await file.arrayBuffer()).toString('base64')}`
 
   let res: Response
   try {
@@ -106,13 +130,7 @@ export async function POST(req: Request) {
         model,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          {
-            role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: dataUrl } },
-              { type: 'text', text: 'Extract every dish from this menu and return the JSON described above.' },
-            ],
-          },
+          { role: 'user', content: userContent },
         ],
       }),
     })

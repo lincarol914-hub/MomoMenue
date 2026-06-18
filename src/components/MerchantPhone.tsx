@@ -286,7 +286,7 @@ function AddDish({ store }: { store: Store }) {
     <div onClick={onClick} style={{ flex: 1, cursor: 'pointer', textAlign: 'center', padding: '13px 6px', borderRadius: 14, background: active ? '#8B6E5C' : '#F6EFE6', color: active ? '#FFF9F3' : '#A1887F', fontSize: 13.5, fontWeight: 700 }}>{label}</div>
   )
   const isScan = s.addMethod === 'file' || s.addMethod === 'photo'
-  const accept = s.addMethod === 'photo' ? 'image/*' : 'image/*,application/pdf'
+  const accept = s.addMethod === 'photo' ? 'image/*' : 'image/*,application/pdf,.doc,.docx'
 
   return (
     <div style={{ padding: '0 0 40px' }}>
@@ -345,9 +345,9 @@ function AddDish({ store }: { store: Store }) {
               <Icon type="file" size={46} color="#B8A593" />
             </div>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#5C463A', marginTop: 18 }}>{d.fileTitle}</div>
-            <div style={{ fontSize: 13.5, color: '#A1887F', marginTop: 9, lineHeight: 1.5 }}>{L('点击选择图片或 PDF 菜单，AI 自动识别。', 'Tap to choose a menu image or PDF — AI reads it.')}</div>
+            <div style={{ fontSize: 13.5, color: '#A1887F', marginTop: 9, lineHeight: 1.5 }}>{L('点击选择图片 / PDF / Word 菜单，AI 自动识别。', 'Tap to choose a menu image, PDF or Word — AI reads it.')}</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16 }}>
-              {['JPG', 'PNG', 'PDF'].map((f) => (
+              {['JPG', 'PNG', 'PDF', 'Word'].map((f) => (
                 <span key={f} style={{ fontSize: 11.5, fontWeight: 700, color: '#8B6E5C', background: '#F6EFE6', borderRadius: 8, padding: '5px 11px' }}>{f}</span>
               ))}
             </div>
