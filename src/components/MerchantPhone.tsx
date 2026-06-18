@@ -7,7 +7,7 @@ import { DICT } from '../dashboard/lib/i18n'
 import type { RangeKey } from '../dashboard/lib/analytics'
 import { DEFAULT_THEME, type MenuTheme } from '../dashboard/lib/menu-design'
 import type { ScreenKey } from '../dashboard/components/dashboard/BottomNav'
-import { HomeScreen } from '../dashboard/components/dashboard/HomeScreen'
+import type { Dict as DashDict } from '../dashboard/lib/i18n'
 import { OverviewScreen } from '../dashboard/components/dashboard/OverviewScreen'
 import { StatsScreen } from '../dashboard/components/dashboard/StatsScreen'
 import { MenuDesignScreen } from '../dashboard/components/dashboard/MenuDesignScreen'
@@ -45,7 +45,7 @@ export function MerchantPhone({ store }: { store: Store }) {
       <div className="mm-scroll" style={{ flex: 1, overflowY: 'auto' }}>
         {s.mScreen === 'welcome' && <Welcome store={store} />}
         {s.mScreen === 'login' && <Login store={store} />}
-        {s.mScreen === 'home' && <HomeScreen t={t} lang={s.lang} onNavigate={goScreen} />}
+        {s.mScreen === 'home' && <V2Home store={store} t={t} onNav={goScreen} />}
         {s.mScreen === 'overview' && <OverviewScreen t={t} range={range} onRange={setRange} onBack={store.goHome} />}
         {s.mScreen === 'stats' && <StatsScreen t={t} lang={s.lang} range={range} onRange={setRange} onBack={store.goHome} />}
         {s.mScreen === 'design' && <MenuDesignScreen t={t} lang={s.lang} theme={menuTheme} onChange={(p) => setMenuTheme((prev) => ({ ...prev, ...p }))} onBack={store.goHome} />}
@@ -65,6 +65,74 @@ export function MerchantPhone({ store }: { store: Store }) {
         </div>
       )}
     </PhoneFrame>
+  )
+}
+
+function V2Home({ store, t, onNav }: { store: Store; t: DashDict; onNav: (s: ScreenKey | 'qr') => void }) {
+  const { s } = store
+  const statusLabel: Record<OrderStatus, string> = { new: t.sNew, making: t.sMaking, done: t.sDone }
+  const quick: { img: string; label: string; key: ScreenKey | 'qr' }[] = [
+    { img: 'qa-design', label: t.designEntry, key: 'design' },
+    { img: 'qa-qr', label: t.qrEntry, key: 'qr' },
+    { img: 'qa-overview', label: t.ovEntry, key: 'overview' },
+    { img: 'qa-stats', label: t.statsEntry, key: 'stats' },
+  ]
+  const tile = (value: string, label: string, bg: string, valColor: string, labColor: string) => (
+    <div style={{ background: bg, borderRadius: 16, padding: 15 }}>
+      <div style={{ fontSize: 26, fontWeight: 800, color: valColor, letterSpacing: '-.5px' }}>{value}</div>
+      <div style={{ fontSize: 12, color: labColor, marginTop: 5 }}>{label}</div>
+    </div>
+  )
+  return (
+    <div style={{ padding: '6px 22px 30px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#5C463A', letterSpacing: '-.5px' }}>{t.greeting} 👋</div>
+          <div style={{ fontSize: 13, color: '#A1887F', marginTop: 4 }}>{t.greetingSub}</div>
+        </div>
+        <img src="/assets/m-tray.png" alt="" style={{ width: 64, height: 64, objectFit: 'contain' }} />
+      </div>
+
+      <div style={{ background: '#FFFFFF', borderRadius: 22, padding: 18, marginTop: 20, boxShadow: '0 6px 18px -10px rgba(139,110,92,.25)' }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: '#5C463A', marginBottom: 14 }}>{t.todayOverview}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
+          {tile('¥3,210', t.revenue, '#8B6E5C', '#FFF9F3', '#E7D8CA')}
+          {tile('58', t.validOrders, '#F6EFE6', '#5C463A', '#A1887F')}
+          {tile('6', t.tablesInUse, '#F6EFE6', '#5C463A', '#A1887F')}
+          {tile('12', t.pendingOrders, '#F6EFE6', '#C0703F', '#A1887F')}
+        </div>
+      </div>
+
+      <div style={{ fontSize: 17, fontWeight: 800, color: '#5C463A', marginTop: 28, marginBottom: 14 }}>{t.quick}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
+        {quick.map((q) => (
+          <div key={q.key} onClick={() => onNav(q.key)} style={{ background: '#FFFFFF', borderRadius: 18, padding: 16, display: 'flex', alignItems: 'center', gap: 13, boxShadow: '0 4px 14px -10px rgba(139,110,92,.3)', cursor: 'pointer' }}>
+            <img src={`/assets/${q.img}.png`} style={{ width: 46, height: 46, objectFit: 'contain', flex: 'none' }} />
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#5C463A' }}>{q.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 28, marginBottom: 14 }}>
+        <div style={{ fontSize: 17, fontWeight: 800, color: '#5C463A' }}>{t.liveOrders}</div>
+        <div onClick={store.goOrders} style={{ fontSize: 13, color: '#A1887F', cursor: 'pointer', fontWeight: 600 }}>{t.viewAll} ›</div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {s.orders.slice(0, 3).map((o) => (
+          <div key={o.id} style={{ background: '#FFFFFF', borderRadius: 16, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 13, boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)' }}>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: '#F6EFE6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#8B6E5C', flex: 'none' }}>{o.table}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#5C463A' }}>{store.L('桌号 ', 'Table ') + o.table}</div>
+              <div style={{ fontSize: 12.5, color: '#A1887F', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{itemsText(store, o)}</div>
+            </div>
+            <div style={{ textAlign: 'right', flex: 'none' }}>
+              <div style={{ fontSize: 12, color: '#C4B3A3' }}>{o.time}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: STATUS_COLOR[o.status], background: STATUS_BG[o.status], borderRadius: 8, padding: '3px 9px', marginTop: 5 }}>{statusLabel[o.status]}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
