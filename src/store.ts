@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   DICTS, INITIAL_ORDERS, INITIAL_TABLES, MENU,
-  type CartLine, type CatKey, type Dict, type Lang, type Order, type Table, type Variant,
+  type CartLine, type CatKey, type Dict, type Dish, type Lang, type Order, type Table, type Variant,
 } from './data'
 
 export type MScreen = 'welcome' | 'login' | 'home' | 'menu' | 'addDish' | 'qr' | 'orders' | 'settings'
@@ -30,6 +30,8 @@ export interface State {
   table: string
   /** restaurant tables managed in the merchant back office */
   tables: Table[]
+  /** the dishes on the menu (recognized dishes get appended here) */
+  menu: Dish[]
 }
 
 function initialState(lang: Lang, variant: Variant, table: string, mScreen: MScreen): State {
@@ -51,6 +53,7 @@ function initialState(lang: Lang, variant: Variant, table: string, mScreen: MScr
     orders: INITIAL_ORDERS,
     table,
     tables: INITIAL_TABLES,
+    menu: MENU,
   }
 }
 
@@ -61,8 +64,10 @@ export interface Store {
   L: (zh: string, en: string) => string
   /** dish name in the active language */
   nm: (it: { zh: string; en: string }) => string
-  find: (id: string) => (typeof MENU)[number] | undefined
+  find: (id: string) => Dish | undefined
   isOn: (id: string) => boolean
+  /** append recognized/created dishes to the menu */
+  addDishes: (dishes: Dish[]) => void
 
   // merchant navigation
   goWelcome: () => void
@@ -98,7 +103,7 @@ export interface Store {
 
 export function useMomoStore(lang: Lang, variant: Variant, table = 'A1', initialScreen: MScreen = 'welcome'): Store {
   const [s, setS] = useState<State>(() => initialState(lang, variant, table, initialScreen))
-  const find = (id: string) => MENU.find((m) => m.id === id)
+  const find = (id: string) => s.menu.find((m) => m.id === id)
 
   return useMemo<Store>(() => {
     const L = (zh: string, en: string) => (s.lang === 'zh' ? zh : en)
@@ -109,6 +114,7 @@ export function useMomoStore(lang: Lang, variant: Variant, table = 'A1', initial
       nm: (it) => (s.lang === 'zh' ? it.zh : it.en),
       find,
       isOn: (id) => s.itemOn[id] !== false,
+      addDishes: (dishes) => setS((p) => ({ ...p, menu: [...p.menu, ...dishes] })),
 
       goWelcome: () => setS((p) => ({ ...p, mScreen: 'welcome' })),
       goLogin: () => setS((p) => ({ ...p, mScreen: 'login' })),

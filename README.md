@@ -70,6 +70,25 @@ sheet (`下载全部二维码`). QR codes are generated client-side with the
 `qrcode` library and point at the current deployment's origin, so they work
 as soon as the site is live — print them and place one on each table.
 
+## Menu recognition (AI)
+
+The merchant **Add dish** screen can build the menu from a photo or document:
+
+- **上传文件 / 拍照添加** send the image or PDF to `POST /api/extract-menu`, a
+  Next.js route that calls Claude's vision model (`claude-opus-4-8`) and returns
+  the dishes (name, price, category, description) as structured JSON. Recognized
+  dishes are listed for review, then added to the menu in one tap.
+- Supported inputs: images (JPG/PNG/WEBP) and PDF. Excel/Word should be exported
+  to PDF or screenshotted first.
+
+**Setup:** this needs an Anthropic API key. Get one at
+<https://console.anthropic.com>, then add it as an environment variable named
+`ANTHROPIC_API_KEY` (Vercel: Project → Settings → Environment Variables; local:
+copy `.env.example` to `.env.local`). Without it the endpoint returns a clear
+"key not configured" message and the rest of the app still works. Each
+recognition is a single model call (a fraction of a cent per menu); cost is
+per-use of the API.
+
 ## Notes
 
 - The dish data, prices, copy, and translations are carried over verbatim

@@ -1,6 +1,8 @@
-import { CAT_KEYS, MENU, catLabel, type Order, type OrderStatus } from '../data'
+import { useRef, useState, type ChangeEvent } from 'react'
+import { CAT_KEYS, catLabel, type CatKey, type Order, type OrderStatus } from '../data'
 import type { Store } from '../store'
 import { appBaseUrl, downloadAllQr, downloadTableQr, tableLink } from '../qr-export'
+import { extractMenu, toDish, type ExtractedDish } from '../menu-extract'
 import { Icon } from './Icon'
 import { PhoneFrame } from './PhoneFrame'
 import { QrCode } from './QrCode'
@@ -242,7 +244,7 @@ function QuickIcon({ img, label, onClick }: { img: string; label: string; onClic
 
 function MenuMgmt({ store }: { store: Store }) {
   const { s, d } = store
-  const items = MENU.filter((m) => (s.menuCat === 'all' ? true : m.cat === s.menuCat))
+  const items = s.menu.filter((m) => (s.menuCat === 'all' ? true : m.cat === s.menuCat))
   return (
     <div style={{ padding: '0 0 30px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 22px 16px' }}>
@@ -295,13 +297,43 @@ function MenuMgmt({ store }: { store: Store }) {
 }
 
 function AddDish({ store }: { store: Store }) {
-  const { s, d } = store
+  const { s, d, L } = store
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [results, setResults] = useState<ExtractedDish[] | null>(null)
+
+  const reset = () => { setResults(null); setError('') }
+  const switchTab = (m: 'manual' | 'file' | 'photo') => { store.setAddMethod(m); reset() }
+
+  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    setBusy(true); setError(''); setResults(null)
+    try {
+      setResults(await extractMenu(f))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '识别失败，请重试。')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const addAll = () => {
+    if (!results?.length) return
+    store.addDishes(results.map((r, i) => toDish(r, i)))
+    store.goMenu()
+  }
+
   const tab = (label: string, active: boolean, onClick: () => void) => (
     <div onClick={onClick} style={{ flex: 1, cursor: 'pointer', textAlign: 'center', padding: '13px 6px', borderRadius: 14, background: active ? '#8B6E5C' : '#F6EFE6', color: active ? '#FFF9F3' : '#A1887F', fontSize: 13.5, fontWeight: 700 }}>{label}</div>
   )
-  const primaryLabel = s.addMethod === 'manual' ? d.saveManual : s.addMethod === 'file' ? d.saveFile : d.savePhoto
+  const isScan = s.addMethod === 'file' || s.addMethod === 'photo'
+  const accept = s.addMethod === 'photo' ? 'image/*' : 'image/*,application/pdf'
+
   return (
     <div style={{ padding: '0 0 40px' }}>
+      <input ref={fileRef} type="file" accept={accept} {...(s.addMethod === 'photo' ? { capture: 'environment' as const } : {})} onChange={onFile} style={{ display: 'none' }} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 22px 18px' }}>
         <div onClick={store.goMenu} style={{ width: 42, height: 42, borderRadius: 14, background: '#F6EFE6', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
           <Icon type="back" size={22} />
@@ -311,10 +343,14 @@ function AddDish({ store }: { store: Store }) {
       </div>
 
       <div style={{ display: 'flex', gap: 8, padding: '0 22px 22px' }}>
-        {tab(d.mManual, s.addMethod === 'manual', () => store.setAddMethod('manual'))}
-        {tab(d.mFile, s.addMethod === 'file', () => store.setAddMethod('file'))}
-        {tab(d.mPhoto, s.addMethod === 'photo', () => store.setAddMethod('photo'))}
+        {tab(d.mManual, s.addMethod === 'manual', () => switchTab('manual'))}
+        {tab(d.mFile, s.addMethod === 'file', () => switchTab('file'))}
+        {tab(d.mPhoto, s.addMethod === 'photo', () => switchTab('photo'))}
       </div>
+
+      {isScan && (results || busy || error) ? (
+        <ScanResult store={store} busy={busy} error={error} results={results} onPick={() => fileRef.current?.click()} onAddAll={addAll} />
+      ) : null}
 
       {s.addMethod === 'manual' && (
         <div style={{ padding: '0 22px' }}>
@@ -344,20 +380,23 @@ function AddDish({ store }: { store: Store }) {
         </div>
       )}
 
-      {s.addMethod === 'file' && (
+      {s.addMethod === 'file' && !results && !busy && !error && (
         <div style={{ padding: '0 22px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: '26px 22px', boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)', textAlign: 'center' }}>
+          <div onClick={() => fileRef.current?.click()} style={{ background: '#FFFFFF', borderRadius: 20, padding: '26px 22px', boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)', textAlign: 'center', cursor: 'pointer' }}>
             <img src="/assets/m-mix.png" alt="" style={{ width: 120, height: 120, objectFit: 'contain' }} />
             <div style={{ width: '100%', height: 118, borderRadius: 18, border: '2px dashed #D8C4B2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 8, color: '#B8A593' }}>
               <Icon type="file" size={46} color="#B8A593" />
             </div>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#5C463A', marginTop: 18 }}>{d.fileTitle}</div>
-            <div style={{ fontSize: 13.5, color: '#A1887F', marginTop: 9, lineHeight: 1.5 }}>{d.fileFormats}</div>
+            <div style={{ fontSize: 13.5, color: '#A1887F', marginTop: 9, lineHeight: 1.5 }}>{L('点击选择图片或 PDF 菜单，AI 自动识别。', 'Tap to choose a menu image or PDF — AI reads it.')}</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16 }}>
-              {['Excel', 'Word', 'PDF'].map((f) => (
+              {['JPG', 'PNG', 'PDF'].map((f) => (
                 <span key={f} style={{ fontSize: 11.5, fontWeight: 700, color: '#8B6E5C', background: '#F6EFE6', borderRadius: 8, padding: '5px 11px' }}>{f}</span>
               ))}
             </div>
+          </div>
+          <div onClick={() => fileRef.current?.click()} style={{ ...primaryBtn, height: 56, borderRadius: 16, fontSize: 16, marginTop: 16 }}>
+            <Icon type="file" size={20} color="#FFF9F3" />&nbsp;{L('选择文件', 'Choose file')}
           </div>
           <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start', marginTop: 16, background: '#F6EFE6', borderRadius: 14, padding: 14 }}>
             <div style={{ flex: 'none' }}><Icon type="spark" size={22} color="#C0703F" /></div>
@@ -366,9 +405,9 @@ function AddDish({ store }: { store: Store }) {
         </div>
       )}
 
-      {s.addMethod === 'photo' && (
+      {s.addMethod === 'photo' && !results && !busy && !error && (
         <div style={{ padding: '0 22px' }}>
-          <div style={{ background: '#5C4A3D', borderRadius: 20, height: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+          <div onClick={() => fileRef.current?.click()} style={{ background: '#5C4A3D', borderRadius: 20, height: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
             <div style={{ position: 'absolute', top: 24, left: 24, width: 26, height: 26, borderTop: '3px solid #F6EFE6', borderLeft: '3px solid #F6EFE6', borderTopLeftRadius: 8 }} />
             <div style={{ position: 'absolute', top: 24, right: 24, width: 26, height: 26, borderTop: '3px solid #F6EFE6', borderRight: '3px solid #F6EFE6', borderTopRightRadius: 8 }} />
             <div style={{ position: 'absolute', bottom: 24, left: 24, width: 26, height: 26, borderBottom: '3px solid #F6EFE6', borderLeft: '3px solid #F6EFE6', borderBottomLeftRadius: 8 }} />
@@ -376,8 +415,8 @@ function AddDish({ store }: { store: Store }) {
             <div style={{ color: 'rgba(246,239,230,.7)' }}><Icon type="cam" size={50} color="#FFF9F3" /></div>
             <div style={{ color: '#F6EFE6', fontSize: 14, marginTop: 16, fontWeight: 600 }}>{d.photoHint}</div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 22 }}>
-            <div style={{ width: 74, height: 74, borderRadius: '50%', border: '4px solid #97785F', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <div onClick={() => fileRef.current?.click()} style={{ display: 'flex', justifyContent: 'center', marginTop: 22, cursor: 'pointer' }}>
+            <div style={{ width: 74, height: 74, borderRadius: '50%', border: '4px solid #97785F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#97785F' }} />
             </div>
           </div>
@@ -388,9 +427,61 @@ function AddDish({ store }: { store: Store }) {
         </div>
       )}
 
-      <div style={{ padding: '24px 22px 0' }}>
-        <div onClick={store.goMenu} style={{ ...primaryBtn, height: 58, borderRadius: 18, fontSize: 17 }}>{primaryLabel}</div>
+      {s.addMethod === 'manual' && (
+        <div style={{ padding: '24px 22px 0' }}>
+          <div onClick={store.goMenu} style={{ ...primaryBtn, height: 58, borderRadius: 18, fontSize: 17 }}>{d.saveManual}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ScanResult({ store, busy, error, results, onPick, onAddAll }: { store: Store; busy: boolean; error: string; results: ExtractedDish[] | null; onPick: () => void; onAddAll: () => void }) {
+  const { d, L } = store
+  if (busy) {
+    return (
+      <div style={{ padding: '10px 22px 0', textAlign: 'center' }}>
+        <div style={{ background: '#FFFFFF', borderRadius: 20, padding: '40px 22px', boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)' }}>
+          <div style={{ display: 'inline-flex' }}><Icon type="spark" size={40} color="#C0703F" /></div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: '#5C463A', marginTop: 14 }}>{L('AI 识别中…', 'Reading the menu…')}</div>
+          <div style={{ fontSize: 13, color: '#A1887F', marginTop: 8 }}>{L('正在提取菜名与价格，约需 5–15 秒。', 'Extracting dishes and prices, ~5–15s.')}</div>
+        </div>
       </div>
+    )
+  }
+  if (error) {
+    return (
+      <div style={{ padding: '10px 22px 0' }}>
+        <div style={{ background: '#FBEDE7', border: '1px solid #F0C9B6', borderRadius: 16, padding: 16, color: '#B5532E', fontSize: 14, lineHeight: 1.5 }}>{error}</div>
+        <div onClick={onPick} style={{ ...primaryBtn, height: 54, borderRadius: 16, fontSize: 16, marginTop: 14 }}>{L('重新选择', 'Try again')}</div>
+      </div>
+    )
+  }
+  if (!results) return null
+  if (results.length === 0) {
+    return (
+      <div style={{ padding: '10px 22px 0' }}>
+        <div style={{ background: '#F6EFE6', borderRadius: 16, padding: 16, color: '#8B6E5C', fontSize: 14, lineHeight: 1.5 }}>{L('没有识别到菜品，换一张更清晰的菜单试试。', 'No dishes found — try a clearer menu image.')}</div>
+        <div onClick={onPick} style={{ ...primaryBtn, height: 54, borderRadius: 16, fontSize: 16, marginTop: 14 }}>{L('重新选择', 'Try again')}</div>
+      </div>
+    )
+  }
+  return (
+    <div style={{ padding: '4px 22px 0' }}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: '#5C463A', marginBottom: 12 }}>{L(`识别到 ${results.length} 道菜`, `Found ${results.length} dishes`)}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {results.map((r, i) => (
+          <div key={i} style={{ background: '#FFFFFF', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15.5, fontWeight: 700, color: '#5C463A' }}>{r.name}</div>
+              <div style={{ fontSize: 12, color: '#A1887F', marginTop: 3 }}>{catLabel(d, (r.category as CatKey) ?? 'staple')}</div>
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#8B6E5C' }}>¥{Math.max(0, Math.round(r.price))}</div>
+          </div>
+        ))}
+      </div>
+      <div onClick={onAddAll} style={{ ...primaryBtn, height: 56, borderRadius: 16, fontSize: 16, marginTop: 16 }}>{L(`全部添加到菜单（${results.length}）`, `Add all to menu (${results.length})`)}</div>
+      <div onClick={onPick} style={{ textAlign: 'center', marginTop: 14, fontSize: 14, fontWeight: 700, color: '#A1887F', cursor: 'pointer' }}>{L('重新选择', 'Choose another')}</div>
     </div>
   )
 }
