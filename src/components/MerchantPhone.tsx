@@ -3,6 +3,14 @@ import { CAT_KEYS, catLabel, type CatKey, type Order, type OrderStatus } from '.
 import type { Store } from '../store'
 import { appBaseUrl, downloadAllQr, downloadTableQr, tableLink } from '../qr-export'
 import { extractMenu, toDish, type ExtractedDish } from '../menu-extract'
+import { DICT } from '../dashboard/lib/i18n'
+import type { RangeKey } from '../dashboard/lib/analytics'
+import { DEFAULT_THEME, type MenuTheme } from '../dashboard/lib/menu-design'
+import type { ScreenKey } from '../dashboard/components/dashboard/BottomNav'
+import { HomeScreen } from '../dashboard/components/dashboard/HomeScreen'
+import { OverviewScreen } from '../dashboard/components/dashboard/OverviewScreen'
+import { StatsScreen } from '../dashboard/components/dashboard/StatsScreen'
+import { MenuDesignScreen } from '../dashboard/components/dashboard/MenuDesignScreen'
 import { Icon } from './Icon'
 import { PhoneFrame } from './PhoneFrame'
 import { QrCode } from './QrCode'
@@ -12,7 +20,19 @@ const STATUS_BG: Record<OrderStatus, string> = { new: '#F7E6D6', making: '#F0E6D
 
 export function MerchantPhone({ store }: { store: Store }) {
   const { s, d } = store
-  const showNav = ['home', 'menu', 'orders', 'settings'].includes(s.mScreen)
+  const showNav = ['home', 'menu', 'orders', 'settings', 'overview', 'stats', 'design'].includes(s.mScreen)
+  const t = DICT[s.lang]
+  const [range, setRange] = useState<RangeKey>('week')
+  const [menuTheme, setMenuTheme] = useState<MenuTheme>(DEFAULT_THEME)
+
+  // Home quick actions / nav from the dashboard module → existing screens.
+  const goScreen = (sk: ScreenKey | 'qr') => {
+    if (sk === 'qr') store.goQr()
+    else if (sk === 'overview') store.goOverview()
+    else if (sk === 'stats') store.goStats()
+    else if (sk === 'design') store.goDesign()
+    else store.goHome()
+  }
 
   const langToggle = (
     <div onClick={store.toggleLang} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#F6EFE6', borderRadius: 11, padding: '6px 11px', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: '#8B6E5C' }}>
@@ -25,7 +45,10 @@ export function MerchantPhone({ store }: { store: Store }) {
       <div className="mm-scroll" style={{ flex: 1, overflowY: 'auto' }}>
         {s.mScreen === 'welcome' && <Welcome store={store} />}
         {s.mScreen === 'login' && <Login store={store} />}
-        {s.mScreen === 'home' && (s.variant === 'a' ? <HomeA store={store} /> : <HomeB store={store} />)}
+        {s.mScreen === 'home' && <HomeScreen t={t} lang={s.lang} onNavigate={goScreen} />}
+        {s.mScreen === 'overview' && <OverviewScreen t={t} range={range} onRange={setRange} onBack={store.goHome} />}
+        {s.mScreen === 'stats' && <StatsScreen t={t} lang={s.lang} range={range} onRange={setRange} onBack={store.goHome} />}
+        {s.mScreen === 'design' && <MenuDesignScreen t={t} lang={s.lang} theme={menuTheme} onChange={(p) => setMenuTheme((prev) => ({ ...prev, ...p }))} onBack={store.goHome} />}
         {s.mScreen === 'menu' && <MenuMgmt store={store} />}
         {s.mScreen === 'addDish' && <AddDish store={store} />}
         {s.mScreen === 'qr' && <Tables store={store} />}
@@ -104,140 +127,6 @@ function Login({ store }: { store: Store }) {
         {d.noAccount} <span onClick={store.doLogin} style={{ color: '#8B6E5C', fontWeight: 700, cursor: 'pointer' }}>{d.register}</span>
       </div>
       <div style={{ textAlign: 'center', marginTop: 'auto', paddingTop: 30, fontSize: 12.5, color: '#C4B3A3' }}>{d.demoHint}</div>
-    </div>
-  )
-}
-
-function StatCard({ value, label, bg, valColor, labColor }: { value: string; label: string; bg: string; valColor: string; labColor: string }) {
-  return (
-    <div style={{ background: bg, borderRadius: 16, padding: 15 }}>
-      <div style={{ fontSize: 26, fontWeight: 800, color: valColor, letterSpacing: '-.5px' }}>{value}</div>
-      <div style={{ fontSize: 12, color: labColor, marginTop: 5 }}>{label}</div>
-    </div>
-  )
-}
-
-function LiveOrderRow({ store, o, darkBadge }: { store: Store; o: Order; darkBadge?: boolean }) {
-  const { d } = store
-  return (
-    <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 13, boxShadow: '0 4px 14px -10px rgba(139,110,92,.25)' }}>
-      <div style={{ width: 42, height: 42, borderRadius: 12, background: darkBadge ? '#8B6E5C' : '#F6EFE6', color: darkBadge ? '#FFF9F3' : '#8B6E5C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, flex: 'none' }}>{o.table}</div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: '#5C463A' }}>{store.L('桌号 ', 'Table ') + o.table}</div>
-        <div style={{ fontSize: 12.5, color: '#A1887F', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{itemsText(store, o)}</div>
-      </div>
-      <div style={{ textAlign: 'right', flex: 'none' }}>
-        <div style={{ fontSize: 12, color: '#C4B3A3' }}>{o.time}</div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: STATUS_COLOR[o.status], background: STATUS_BG[o.status], borderRadius: 8, padding: '3px 9px', marginTop: 5 }}>{statusLabel(d, o.status)}</div>
-      </div>
-    </div>
-  )
-}
-
-function HomeA({ store }: { store: Store }) {
-  const { s, d } = store
-  return (
-    <div style={{ padding: '6px 22px 30px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#5C463A', letterSpacing: '-.5px' }}>{d.greeting} 👋</div>
-          <div style={{ fontSize: 13, color: '#A1887F', marginTop: 4 }}>{d.greetingSub}</div>
-        </div>
-        <img src="/assets/m-tray.png" alt="" style={{ width: 64, height: 64, objectFit: 'contain' }} />
-      </div>
-
-      <div style={{ background: '#FFFFFF', borderRadius: 22, padding: 18, marginTop: 20, boxShadow: '0 6px 18px -10px rgba(139,110,92,.25)' }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: '#5C463A', marginBottom: 14 }}>{d.todayOverview}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
-          <StatCard value="¥3,210" label={d.revenue} bg="#8B6E5C" valColor="#FFF9F3" labColor="#E7D8CA" />
-          <StatCard value="58" label={d.validOrders} bg="#F6EFE6" valColor="#5C463A" labColor="#A1887F" />
-          <StatCard value="6" label={d.tablesInUse} bg="#F6EFE6" valColor="#5C463A" labColor="#A1887F" />
-          <StatCard value="12" label={d.pendingOrders} bg="#F6EFE6" valColor="#C0703F" labColor="#A1887F" />
-        </div>
-      </div>
-
-      <div style={{ fontSize: 17, fontWeight: 800, color: '#5C463A', marginTop: 28, marginBottom: 14 }}>{d.quick}</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
-        <QuickCard img="ic-menu" label={d.menuMgmt} onClick={store.goMenu} />
-        <QuickCard img="ic-qr" label={d.qr} onClick={store.goQr} />
-        <QuickCard img="ic-order" label={d.orderCenter} onClick={store.goOrders} />
-        <QuickCard img="ic-gear" label={d.bizSet} onClick={store.goSettings} />
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 28, marginBottom: 14 }}>
-        <div style={{ fontSize: 17, fontWeight: 800, color: '#5C463A' }}>{d.liveOrders}</div>
-        <div onClick={store.goOrders} style={{ fontSize: 13, color: '#A1887F', cursor: 'pointer', fontWeight: 600 }}>{d.viewAll} ›</div>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {s.orders.slice(0, 3).map((o) => <LiveOrderRow key={o.id} store={store} o={o} />)}
-      </div>
-    </div>
-  )
-}
-
-function QuickCard({ img, label, onClick }: { img: string; label: string; onClick: () => void }) {
-  return (
-    <div onClick={onClick} style={{ background: '#FFFFFF', borderRadius: 18, padding: 16, display: 'flex', alignItems: 'center', gap: 13, boxShadow: '0 4px 14px -10px rgba(139,110,92,.3)', cursor: 'pointer' }}>
-      <img src={`assets/${img}.png`} style={{ width: 46, height: 46, objectFit: 'contain', flex: 'none' }} />
-      <div style={{ fontSize: 15, fontWeight: 700, color: '#5C463A' }}>{label}</div>
-    </div>
-  )
-}
-
-function HomeB({ store }: { store: Store }) {
-  const { s, d } = store
-  const stat = (v: string, l: string) => (
-    <div>
-      <div style={{ fontSize: 22, fontWeight: 800 }}>{v}</div>
-      <div style={{ fontSize: 11.5, color: '#D8C4B2', marginTop: 2 }}>{l}</div>
-    </div>
-  )
-  const divider = <div style={{ width: 1, background: 'rgba(255,249,243,.22)' }} />
-  return (
-    <div style={{ padding: '6px 0 30px' }}>
-      <div style={{ margin: '0 22px', background: '#8B6E5C', borderRadius: 26, padding: 24, color: '#FFF9F3', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: 14, color: '#E7D8CA' }}>{d.greeting} 👋</div>
-            <div style={{ fontSize: 13, color: '#D8C4B2', marginTop: 24 }}>{d.revenue}</div>
-            <div style={{ fontSize: 42, fontWeight: 800, letterSpacing: '-2px', marginTop: 4 }}>¥3,210</div>
-          </div>
-          <img src="/assets/m-tray.png" alt="" style={{ width: 88, height: 88, objectFit: 'contain', marginTop: -4 }} />
-        </div>
-        <div style={{ display: 'flex', gap: 22, marginTop: 16 }}>
-          {stat('58', d.validOrders)}
-          {divider}
-          {stat('6', d.tablesInUse)}
-          {divider}
-          {stat('12', d.pendingOrders)}
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '26px 26px 6px' }}>
-        <QuickIcon img="ic-menu" label={d.menuMgmt} onClick={store.goMenu} />
-        <QuickIcon img="ic-qr" label={d.qr} onClick={store.goQr} />
-        <QuickIcon img="ic-order" label={d.orderCenter} onClick={store.goOrders} />
-        <QuickIcon img="ic-gear" label={d.bizSet} onClick={store.goSettings} />
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '24px 22px 14px' }}>
-        <div style={{ fontSize: 17, fontWeight: 800, color: '#5C463A' }}>{d.liveOrders}</div>
-        <div onClick={store.goOrders} style={{ fontSize: 13, color: '#A1887F', cursor: 'pointer', fontWeight: 600 }}>{d.viewAll} ›</div>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '0 22px' }}>
-        {s.orders.slice(0, 3).map((o) => <LiveOrderRow key={o.id} store={store} o={o} darkBadge />)}
-      </div>
-    </div>
-  )
-}
-
-function QuickIcon({ img, label, onClick }: { img: string; label: string; onClick: () => void }) {
-  return (
-    <div onClick={onClick} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9, cursor: 'pointer', flex: 'none' }}>
-      <div style={{ width: 62, height: 62, borderRadius: 20, background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 5px 14px -8px rgba(139,110,92,.4)' }}>
-        <img src={`assets/${img}.png`} style={{ width: 42, height: 42, objectFit: 'contain' }} />
-      </div>
-      <div style={{ fontSize: 12, fontWeight: 600, color: '#6B5447' }}>{label}</div>
     </div>
   )
 }

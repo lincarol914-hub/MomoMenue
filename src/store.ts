@@ -4,7 +4,7 @@ import {
   type CartLine, type CatKey, type Dict, type Dish, type Lang, type Order, type Table, type Variant,
 } from './data'
 
-export type MScreen = 'welcome' | 'login' | 'home' | 'menu' | 'addDish' | 'qr' | 'orders' | 'settings'
+export type MScreen = 'welcome' | 'login' | 'home' | 'menu' | 'addDish' | 'qr' | 'orders' | 'settings' | 'overview' | 'stats' | 'design'
 export type MTab = 'home' | 'orders' | 'menu' | 'settings'
 export type AddMethod = 'manual' | 'file' | 'photo'
 export type OrderFilter = 'all' | 'new' | 'making' | 'done'
@@ -79,6 +79,9 @@ export interface Store {
   goQr: () => void
   goOrders: () => void
   goSettings: () => void
+  goOverview: () => void
+  goStats: () => void
+  goDesign: () => void
   setAddMethod: (m: AddMethod) => void
   toggleLang: () => void
   toggleVariant: () => void
@@ -125,6 +128,9 @@ export function useMomoStore(lang: Lang, variant: Variant, table = 'A1', initial
       goQr: () => setS((p) => ({ ...p, mScreen: 'qr', mTab: 'home' })),
       goOrders: () => setS((p) => ({ ...p, mScreen: 'orders', mTab: 'orders' })),
       goSettings: () => setS((p) => ({ ...p, mScreen: 'settings', mTab: 'settings' })),
+      goOverview: () => setS((p) => ({ ...p, mScreen: 'overview', mTab: 'home' })),
+      goStats: () => setS((p) => ({ ...p, mScreen: 'stats', mTab: 'home' })),
+      goDesign: () => setS((p) => ({ ...p, mScreen: 'design', mTab: 'home' })),
       setAddMethod: (m) => setS((p) => ({ ...p, addMethod: m })),
       toggleLang: () => setS((p) => ({ ...p, lang: p.lang === 'zh' ? 'en' : 'zh' })),
       toggleVariant: () => setS((p) => ({ ...p, variant: p.variant === 'a' ? 'b' : 'a' })),
