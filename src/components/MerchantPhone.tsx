@@ -7,6 +7,7 @@ import { DICT } from '../dashboard/lib/i18n'
 import type { RangeKey } from '../dashboard/lib/analytics'
 import { DEFAULT_THEME, type MenuTheme } from '../dashboard/lib/menu-design'
 import { loadTheme, saveTheme } from '../menu-theme'
+import { fetchSnapshot, publishSnapshot, offIds } from '../menu-sync'
 import type { ScreenKey } from '../dashboard/components/dashboard/BottomNav'
 import type { Dict as DashDict } from '../dashboard/lib/i18n'
 import { OverviewScreen } from '../dashboard/components/dashboard/OverviewScreen'
@@ -25,9 +26,39 @@ export function MerchantPhone({ store }: { store: Store }) {
   const t = DICT[s.lang]
   const [range, setRange] = useState<RangeKey>('week')
   const [menuTheme, setMenuTheme] = useState<MenuTheme>(DEFAULT_THEME)
-  // Load the saved menu design once mounted (SSR-safe), then persist on edit so
-  // the customer ordering page picks it up.
-  useEffect(() => { setMenuTheme(loadTheme()) }, [])
+  // Becomes true once we've loaded the published menu, so we don't republish
+  // (and clobber the cloud) before the merchant's in-memory copy matches it.
+  const hydrated = useRef(false)
+
+  // On startup, load the published menu (theme + dishes + off-list) from the
+  // cloud so the back office matches what customers see; fall back to the local
+  // theme cache when nothing is published yet (or KV isn't configured).
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      const snap = await fetchSnapshot()
+      if (!alive) return
+      if (snap) {
+        setMenuTheme(snap.theme ?? DEFAULT_THEME)
+        store.hydrate(snap.dishes ?? [], snap.off ?? [])
+      } else {
+        setMenuTheme(loadTheme())
+      }
+      hydrated.current = true
+    })()
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-publish to the cloud whenever the design or the menu changes, so every
+  // scanned phone picks it up. Debounced to coalesce rapid edits.
+  useEffect(() => {
+    if (!hydrated.current) return
+    const off = offIds(s.itemOn)
+    const t = setTimeout(() => { void publishSnapshot({ theme: menuTheme, dishes: s.menu, off }) }, 700)
+    return () => clearTimeout(t)
+  }, [menuTheme, s.menu, s.itemOn])
+
   const changeTheme = (p: Partial<MenuTheme>) =>
     setMenuTheme((prev) => { const next = { ...prev, ...p }; saveTheme(next); return next })
 

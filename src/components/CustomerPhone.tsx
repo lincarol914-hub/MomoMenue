@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react'
 import { CAT_KEYS, MENU, catLabel, type CatKey, type OrderStatus } from '../data'
 import type { Store } from '../store'
-import { useMenuTheme } from '../menu-theme'
-import { patternBackground, type MenuTheme } from '../dashboard/lib/menu-design'
+import { fetchSnapshot } from '../menu-sync'
+import { DEFAULT_THEME, patternBackground, type MenuTheme } from '../dashboard/lib/menu-design'
 import { Icon } from './Icon'
 import { PhoneFrame } from './PhoneFrame'
 
@@ -16,7 +17,27 @@ const primaryBar = {
 
 export function CustomerPhone({ store }: { store: Store }) {
   const { s, d } = store
-  const theme = useMenuTheme()
+  const [theme, setTheme] = useState<MenuTheme>(DEFAULT_THEME)
+
+  // Load the published menu (theme + dishes + off-list), then keep it fresh:
+  // poll every 10s and refresh whenever the page becomes visible again, so the
+  // menu auto-updates after the merchant saves a design or menu change.
+  useEffect(() => {
+    let alive = true
+    const load = async () => {
+      const snap = await fetchSnapshot()
+      if (!alive || !snap) return
+      setTheme(snap.theme ?? DEFAULT_THEME)
+      store.hydrate(snap.dishes ?? [], snap.off ?? [])
+    }
+    load()
+    const iv = setInterval(load, 10000)
+    const onVis = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { alive = false; clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const showBar = s.cScreen === 'menu' || s.cScreen === 'cart'
   const cartTotal = s.cart.reduce((a, c) => a + (store.find(c.id)?.price ?? 0) * c.qty, 0)
   const cartCount = s.cart.reduce((a, c) => a + c.qty, 0)
@@ -54,7 +75,8 @@ export function CustomerPhone({ store }: { store: Store }) {
 
 function CustomerMenu({ store, theme }: { store: Store; theme: MenuTheme }) {
   const { s, d } = store
-  const items = MENU.filter((m) => m.cat === s.cCat)
+  // Synced menu from the merchant; hide dishes the merchant turned off.
+  const items = s.menu.filter((m) => m.cat === s.cCat && store.isOn(m.id))
   const cats = CAT_KEYS.filter((k) => k !== 'all') as Exclude<CatKey, 'all'>[]
   const pat = patternBackground(theme.pattern)
   // Round "add" button, tinted with the theme color, reused across layouts.

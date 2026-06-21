@@ -76,9 +76,26 @@ The merchant home is the dashboard module under `src/dashboard/` (Tailwind for
 layout, inline styles for color). The Home screen replaces the old dashboard;
 its quick actions open three more screens — **营业概览 (Overview)**, **数据统计
 (Stats)**, and **菜单设计 (Menu Design)** — each with a back button. The menu
-design (theme color, background pattern, and list/card/grid layout) is saved to
-`localStorage` (`src/menu-theme.ts`) and applied live to the customer ordering
-page; swap that module for a DB read/write when a backend is added. The bottom tab bar stays 首页 / 订单 / 菜单 / 设置, so
+design (theme color, background pattern, and list/card/grid layout) drives the
+live customer ordering page.
+
+## Cross-device menu sync
+
+The merchant back office publishes a single **menu snapshot** (theme + dishes +
+which dishes are turned off) to a shared cloud store, and every scanned phone
+reads the same copy — so design and menu changes sync across devices:
+
+- `POST/GET /api/menu-state` stores the snapshot in **Vercel KV / Upstash
+  Redis** (via its REST API). The merchant auto-publishes on any design/menu
+  change (debounced); `src/menu-sync.ts` holds the client helpers.
+- The customer page loads the snapshot on open, then refreshes every 10s and
+  whenever the tab becomes visible again, so the menu updates within seconds of
+  the merchant saving.
+- **Setup:** in Vercel, Storage → add **Upstash for Redis**, connect it to the
+  project, and redeploy. Vercel injects `KV_REST_API_URL` / `KV_REST_API_TOKEN`
+  (or `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`) — both are
+  accepted. Without them the app still runs locally per-device, but changes
+  won't reach other phones. The bottom tab bar stays 首页 / 订单 / 菜单 / 设置, so
 menu management (incl. AI recognition), orders, and settings are unchanged.
 
 Tailwind is configured with **preflight disabled** so it can't disturb the

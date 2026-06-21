@@ -68,6 +68,8 @@ export interface Store {
   isOn: (id: string) => boolean
   /** append recognized/created dishes to the menu */
   addDishes: (dishes: Dish[]) => void
+  /** replace the whole menu + off-list from the published cloud snapshot */
+  hydrate: (dishes: Dish[], off: string[]) => void
 
   // merchant navigation
   goWelcome: () => void
@@ -118,6 +120,8 @@ export function useMomoStore(lang: Lang, variant: Variant, table = 'A1', initial
       find,
       isOn: (id) => s.itemOn[id] !== false,
       addDishes: (dishes) => setS((p) => ({ ...p, menu: [...p.menu, ...dishes] })),
+      hydrate: (dishes, off) =>
+        setS((p) => ({ ...p, menu: dishes, itemOn: Object.fromEntries(off.map((id) => [id, false])) })),
 
       goWelcome: () => setS((p) => ({ ...p, mScreen: 'welcome' })),
       goLogin: () => setS((p) => ({ ...p, mScreen: 'login' })),
