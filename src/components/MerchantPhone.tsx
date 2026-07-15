@@ -8,6 +8,7 @@ import type { RangeKey } from '../dashboard/lib/analytics'
 import { DEFAULT_THEME, type MenuTheme } from '../dashboard/lib/menu-design'
 import { loadTheme, saveTheme } from '../menu-theme'
 import { fetchSnapshot, publishSnapshot, offIds } from '../menu-sync'
+import { fetchOrders } from '../order-sync'
 import type { ScreenKey } from '../dashboard/components/dashboard/BottomNav'
 import type { Dict as DashDict } from '../dashboard/lib/i18n'
 import { OverviewScreen } from '../dashboard/components/dashboard/OverviewScreen'
@@ -58,6 +59,22 @@ export function MerchantPhone({ store }: { store: Store }) {
     const t = setTimeout(() => { void publishSnapshot({ theme: menuTheme, dishes: s.menu, off }) }, 700)
     return () => clearTimeout(t)
   }, [menuTheme, s.menu, s.itemOn])
+
+  // Poll the shared order store so orders placed on customers' phones show up
+  // here automatically; also refresh the moment the app regains focus.
+  useEffect(() => {
+    let alive = true
+    const load = async () => {
+      const cloud = await fetchOrders()
+      if (alive && cloud.length) store.hydrateOrders(cloud)
+    }
+    load()
+    const iv = setInterval(load, 8000)
+    const onVis = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { alive = false; clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const changeTheme = (p: Partial<MenuTheme>) =>
     setMenuTheme((prev) => { const next = { ...prev, ...p }; saveTheme(next); return next })

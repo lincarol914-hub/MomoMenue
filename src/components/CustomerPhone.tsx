@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { CAT_KEYS, MENU, catLabel, type CatKey, type OrderStatus } from '../data'
 import type { Store } from '../store'
 import { fetchSnapshot } from '../menu-sync'
+import { fetchOrder } from '../order-sync'
 import { DEFAULT_THEME, patternBackground, type MenuTheme } from '../dashboard/lib/menu-design'
 import { Icon } from './Icon'
 import { PhoneFrame } from './PhoneFrame'
@@ -37,6 +38,22 @@ export function CustomerPhone({ store }: { store: Store }) {
     return () => { alive = false; clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // On the order-placed screen, follow the merchant's status changes (接单 /
+  // 出餐) so the tracking steps advance without a manual refresh.
+  useEffect(() => {
+    if (s.cScreen !== 'success' || !s.lastOrderId) return
+    const id = s.lastOrderId
+    let alive = true
+    const track = async () => {
+      const order = await fetchOrder(id)
+      if (alive && order) store.hydrateOrders([order])
+    }
+    track()
+    const iv = setInterval(track, 5000)
+    return () => { alive = false; clearInterval(iv) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.cScreen, s.lastOrderId])
 
   const showBar = s.cScreen === 'menu' || s.cScreen === 'cart'
   const cartTotal = s.cart.reduce((a, c) => a + (store.find(c.id)?.price ?? 0) * c.qty, 0)

@@ -3,6 +3,7 @@ import {
   DICTS, INITIAL_ORDERS, INITIAL_TABLES, MENU,
   type CartLine, type CatKey, type Dict, type Dish, type Lang, type Order, type Table, type Variant,
 } from './data'
+import { pushOrder } from './order-sync'
 
 export type MScreen = 'welcome' | 'login' | 'home' | 'menu' | 'addDish' | 'qr' | 'orders' | 'settings' | 'overview' | 'stats' | 'design'
 export type MTab = 'home' | 'orders' | 'menu' | 'settings'
@@ -70,6 +71,8 @@ export interface Store {
   addDishes: (dishes: Dish[]) => void
   /** replace the whole menu + off-list from the published cloud snapshot */
   hydrate: (dishes: Dish[], off: string[]) => void
+  /** merge cloud orders in: cloud copies win by id, local-only ones are kept */
+  hydrateOrders: (cloud: Order[]) => void
 
   // merchant navigation
   goWelcome: () => void
@@ -122,6 +125,17 @@ export function useMomoStore(lang: Lang, variant: Variant, table = 'A1', initial
       addDishes: (dishes) => setS((p) => ({ ...p, menu: [...p.menu, ...dishes] })),
       hydrate: (dishes, off) =>
         setS((p) => ({ ...p, menu: dishes, itemOn: Object.fromEntries(off.map((id) => [id, false])) })),
+      hydrateOrders: (cloud) =>
+        setS((p) => {
+          if (!cloud.length) return p
+          const cloudIds = new Set(cloud.map((o) => o.id))
+          // Cloud copies win by id; keep local-only orders (demo seeds, or an
+          // order submitted while offline). Newest (by ts) first; the seed
+          // orders have no ts and stay below in their original order.
+          const merged = [...cloud, ...p.orders.filter((o) => !cloudIds.has(o.id))]
+          merged.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0))
+          return { ...p, orders: merged }
+        }),
 
       goWelcome: () => setS((p) => ({ ...p, mScreen: 'welcome' })),
       goLogin: () => setS((p) => ({ ...p, mScreen: 'login' })),
@@ -142,10 +156,13 @@ export function useMomoStore(lang: Lang, variant: Variant, table = 'A1', initial
       setOrderFilter: (k) => setS((p) => ({ ...p, orderFilter: k })),
       toggleItem: (id) => setS((p) => ({ ...p, itemOn: { ...p.itemOn, [id]: p.itemOn[id] === false ? true : false } })),
       advance: (id) =>
-        setS((p) => ({
-          ...p,
-          orders: p.orders.map((o) => (o.id === id ? { ...o, status: o.status === 'new' ? 'making' : 'done' } : o)),
-        })),
+        setS((p) => {
+          const orders = p.orders.map((o): Order => (o.id === id ? { ...o, status: o.status === 'new' ? 'making' : 'done' } : o))
+          const updated = orders.find((o) => o.id === id)
+          // Publish the status change so the customer's tracking screen follows.
+          if (updated) void pushOrder(updated)
+          return { ...p, orders }
+        }),
       addTable: () =>
         setS((p) => {
           let n = p.tables.length + 1
@@ -182,8 +199,12 @@ export function useMomoStore(lang: Lang, variant: Variant, table = 'A1', initial
             const m = find(ci.id)!
             return [m.zh, m.en, ci.qty] as Order['items'][number]
           })
-          const id = 'oC' + Date.now()
-          const order: Order = { id, table: p.table, items, note: ['', ''], time: '09:42', status: 'new' }
+          const now = new Date()
+          const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+          const id = 'oC' + now.getTime()
+          const order: Order = { id, table: p.table, items, note: ['', ''], time, status: 'new', ts: now.getTime() }
+          // Send to the shared cloud store so the merchant back office sees it.
+          void pushOrder(order)
           return { ...p, orders: [order, ...p.orders], cart: [], cScreen: 'success', lastOrderId: id }
         }),
     }

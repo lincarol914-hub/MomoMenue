@@ -91,6 +91,12 @@ reads the same copy — so design and menu changes sync across devices:
 - The customer page loads the snapshot on open, then refreshes every 10s and
   whenever the tab becomes visible again, so the menu updates within seconds of
   the merchant saving.
+- **Orders sync too** (`/api/orders`, `src/order-sync.ts`): a customer placing
+  an order writes it to a shared Redis hash (one field per order id, so
+  concurrent orders and status updates can't clobber each other). The merchant
+  back office polls every 8s (plus on focus) so new orders appear
+  automatically, and accepting / finishing an order publishes the status back —
+  the customer's tracking screen follows it live (5s poll).
 - **Setup:** in Vercel, Storage → add **Upstash for Redis**, connect it to the
   project, and redeploy. Vercel injects `KV_REST_API_URL` / `KV_REST_API_TOKEN`
   (or `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`) — both are

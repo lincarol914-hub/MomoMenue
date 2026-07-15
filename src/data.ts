@@ -33,6 +33,8 @@ export interface Order {
   note: [string, string]
   time: string
   status: OrderStatus
+  /** epoch millis, used to sort cloud-synced orders (seed demo orders omit it) */
+  ts?: number
 }
 
 export interface CartLine {
